@@ -32,6 +32,7 @@ internal class Program
         var windowOptions = WindowOptions.Default;
         
         windowOptions.WindowBorder = WindowBorder.Fixed;
+        windowOptions.VSync = true;
         windowOptions.Size  = new Vector2D<int>(
             (BaseWidth  * _scale) + (PaddingPx * 2),
             (BaseHeight * _scale) + (PaddingPx * 2) + MenuBarReservePx);
@@ -112,6 +113,12 @@ internal class Program
                         ScaleItem(5);
                         
                         ImGui.EndMenu(/*Scale*/);
+                    }
+
+                    bool isVSyncEnabled = _window.VSync;
+                    if (ImGui.Checkbox("VSync", ref isVSyncEnabled))
+                    {
+                        _window.VSync = !_window.VSync;
                     }
                     
                     ImGui.EndMenu(/*View*/);
