@@ -22,6 +22,7 @@ internal class Program
     private const  int BaseWidth  = 144;                // Base Width  of GB(C) screen in PX
     
     private static int  _scale = 3;                     // The current emulator scale
+    private static int? _pendingScale;                  // New scale to be applied on change
     private const  int  MenuBarReservePx = 18;          // Number of pixels to preserve for menu bar
     
     private static void Main()
@@ -45,6 +46,18 @@ internal class Program
             
             ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
         };
+        
+        // Update : Changes to be made when window itself is modified
+        _window.Update += delta =>
+        {
+            // Defer window resizes to avoid native re-entrancy / segfaults
+            if (_pendingScale.HasValue && _pendingScale != _scale)
+            {
+                _scale = _pendingScale.Value;
+                _pendingScale = null;
+                ApplyScale();
+            }
+        }; 
 
         // Render : What to do when a frame is rendered
         _window.Render += delta =>
@@ -66,9 +79,23 @@ internal class Program
                     ImGui.EndMenu();
                 }
                 
+                if (ImGui.BeginMenu("View"))
+                {
+                    if (ImGui.BeginMenu("Scale"))
+                    {
+                        ScaleItem(2);
+                        ScaleItem(3);
+                        ScaleItem(4);
+                        ScaleItem(5);
+                        
+                        ImGui.EndMenu();
+                    }
+                    
+                    ImGui.EndMenu();
+                }
+                
                 ImGui.EndMainMenuBar();
             }
-
 
             _imGui.Render();
         };
@@ -81,5 +108,27 @@ internal class Program
 
         _window.Run();          // Run runs the render loop and blocks until return
         _window.Dispose();      // At which point we can dispose the window.
+    }
+    
+    private static void ScaleItem(int scale)
+    {
+        bool selected = _scale == scale;                // Set selected scale in menu
+        if (ImGui.MenuItem($"{scale}x", "", selected))  // Apply the scaling
+            _pendingScale = scale;
+    }
+    
+    private static void ApplyScale()
+    {
+        // Resize the window to the new scale
+        _window.Size = new Vector2D<int>(
+            (BaseWidth  * _scale),
+            (BaseHeight * _scale) + MenuBarReservePx);
+        
+        // Recreate ImGui controller so it picks up new framebuffer size + rebuilds device objects
+        _imGui.Dispose();
+        _imGui = new ImGuiController(_gl, _window, _input);
+        
+        // Reapply IO flag (This is a safety tweak)
+        ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
     }
 }
