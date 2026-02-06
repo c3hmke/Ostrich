@@ -1,9 +1,8 @@
-﻿// This file is part of Silk.NET.
-//
-// You may modify and distribute Silk.NET under the terms
-// of the MIT license. See the LICENSE file for details.
+﻿// ReSharper disable AccessToDisposedClosure : Analyser cannot prove _window.Run() blocks, but it does. When disposing in
+//                                             "correct context" SIGABRT happens on other resources resulting in dirty exit.
 
 using System.Drawing;
+using ImGuiNET;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
@@ -13,68 +12,56 @@ namespace App;
 
 internal class Program
 {
-    static void Main(string[] args)
+    private static IWindow         _window = null!;
+    private static GL              _gl     = null!;
+    private static IInputContext   _input  = null!;
+    private static ImGuiController _imGui  = null!;
+    
+    private static void Main()
     {
-        // Create a Silk.NET window as usual
-        using var window = Window.Create(WindowOptions.Default);
-
-        // Declare some variables
-        ImGuiController controller = null;
-        GL gl = null;
-        IInputContext inputContext = null;
-
-        // Our loading function
-        window.Load += () =>
+        // Create a Silk.NET window
+        _window = Window.Create(WindowOptions.Default);
+        
+        // Load : Set up when window is loaded
+        _window.Load += () =>
         {
-            controller = new ImGuiController(
-                gl = window.CreateOpenGL(), // load OpenGL
-                window, // pass in our window
-                inputContext = window.CreateInput() // create an input context
-            );
+            _gl    = GL.GetApi(_window);
+            _input = _window.CreateInput();
+            _imGui = new ImGuiController(_gl, _window, _input);
+            
+            ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
         };
 
-        // Handle resizes
-        window.FramebufferResize += s =>
+        // Resize : Handle what happens when window size changes
+        _window.FramebufferResize += size =>
         {
-            // Adjust the viewport to the new window size
-            gl.Viewport(s);
+            _gl.Viewport(0, 0, (uint) size.X, (uint) size.Y);
         };
 
-        // The render function
-        window.Render += delta =>
+        // Render : What to do when a frame is rendered
+        _window.Render += delta =>
         {
             // Make sure ImGui is up-to-date
-            controller.Update((float) delta);
+            _imGui.Update((float) delta);
 
-            // This is where you'll do any rendering beneath the ImGui context
-            // Here, we just have a blank screen.
-            gl.ClearColor(Color.FromArgb(255, (int) (.45f * 255), (int) (.55f * 255), (int) (.60f * 255)));
-            gl.Clear((uint) ClearBufferMask.ColorBufferBit);
+            // --- Window Clear ---
+            _gl.ClearColor(Color.FromArgb(255, (int) (.45f * 255), (int) (.55f * 255), (int) (.60f * 255)));
+            _gl.Clear((uint) ClearBufferMask.ColorBufferBit);
+            
+            ImGui.ShowDemoWindow(); // Built-in demo window
 
-            // This is where you'll do all of your ImGUi rendering
-            // Here, we're just showing the ImGui built-in demo window.
-            ImGuiNET.ImGui.ShowDemoWindow();
-
-            // Make sure ImGui renders too!
-            controller.Render();
+            _imGui.Render();
         };
 
-        // The closing function
-        window.Closing += () =>
+        // Closing : Clean up on exit
+        _window.Closing += () =>
         {
-            // Dispose our controller first
-            controller?.Dispose();
-
-            // Dispose the input context
-            inputContext?.Dispose();
-
-            // Unload OpenGL
-            gl?.Dispose();
+            _imGui.Dispose();
+            _input.Dispose();
+            _gl.Dispose();
         };
 
-        // Now that everything's defined, let's run this bad boy!
-        window.Run();
-
-        window.Dispose();
+        _window.Run();
+        _window.Dispose();
     }
 }
