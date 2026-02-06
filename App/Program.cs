@@ -24,6 +24,7 @@ internal class Program
     private static int  _scale = 3;                     // The current emulator scale
     private static int? _pendingScale;                  // New scale to be applied on change
     private const  int  MenuBarReservePx = 18;          // Number of pixels to preserve for menu bar
+    private const  int  PaddingPx = 16;                 // Padding around the content area
     
     private static void Main()
     {
@@ -31,9 +32,9 @@ internal class Program
         var windowOptions = WindowOptions.Default;
         
         windowOptions.WindowBorder = WindowBorder.Fixed;
-        windowOptions.Size = new Vector2D<int>(
-            BaseWidth  * _scale,
-            BaseHeight * _scale + MenuBarReservePx);
+        windowOptions.Size  = new Vector2D<int>(
+            (BaseWidth  * _scale) + (PaddingPx * 2),
+            (BaseHeight * _scale) + (PaddingPx * 2) + MenuBarReservePx);
         
         _window = Window.Create(windowOptions);
         
@@ -69,14 +70,29 @@ internal class Program
         // Render : What to do when a frame is rendered
         _window.Render += delta =>
         {
-            // Make sure ImGui is up-to-date
-            _imGui.Update((float) delta);
-
             // --- Window Clear ---
             _gl.ClearColor(Color.FromArgb(255, (int) (.45f * 255), (int) (.55f * 255), (int) (.60f * 255)));
             _gl.Clear((uint) ClearBufferMask.ColorBufferBit);
             
-            //ImGui.ShowDemoWindow(); // Built-in demo window
+            // --- Content Area Setup ---
+            var fb =  _window.FramebufferSize;
+            (int cx, int cy, uint cw, uint ch) = GetContentArea();
+            
+            _gl.Viewport(cx, cy, cw, ch);               // Set the Viewport size
+            
+            _gl.Enable(GLEnum.ScissorTest);             // Hard clip so nothing can draw into the padding area.
+            _gl.Scissor(cx, cy, cw, ch); 
+            
+            // !! TEMP !! visualize the content area
+            _gl.ClearColor(0.15f, 0.15f, 0.15f, 1f);
+            _gl.Clear((uint)ClearBufferMask.ColorBufferBit);
+            // !! ---- !!
+            
+            _gl.Disable(GLEnum.ScissorTest);            // End to the ContentArea
+            _gl.Viewport(0, 0, (uint)fb.X, (uint)fb.Y); // Restore so ImGui draws correctly
+            
+            // --- ImGui ---
+            _imGui.Update((float) delta);               // Make sure ImGui is up-to-date
             if (ImGui.BeginMainMenuBar())
             {
                 if (ImGui.BeginMenu("File"))
@@ -103,12 +119,13 @@ internal class Program
                 
                 ImGui.EndMainMenuBar();
             }
+            //ImGui.ShowDemoWindow(); // Built-in demo window
 
             _imGui.Render();
         };
         
         // Resize : Handle what happens when window size changes
-        _window.FramebufferResize += size => _gl.Viewport(0, 0, (uint) size.X, (uint) size.Y);
+        _window.FramebufferResize += size => _gl.Viewport(0, 0, (uint)size.X, (uint)size.Y);
 
         // Closing : Clean up on exit
         _window.Closing += () => _imGui.Dispose();
@@ -128,8 +145,8 @@ internal class Program
     {
         // Resize the window to the new scale
         _window.Size = new Vector2D<int>(
-            (BaseWidth  * _scale),
-            (BaseHeight * _scale) + MenuBarReservePx);
+            (BaseWidth  * _scale) + (PaddingPx * 2),
+            (BaseHeight * _scale) + (PaddingPx * 2) + MenuBarReservePx);
         
         // Recreate ImGui controller so it picks up new framebuffer size + rebuilds device objects
         _imGui.Dispose();
@@ -137,5 +154,19 @@ internal class Program
         
         // Reapply IO flag (This is a safety tweak)
         ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
+    }
+    
+    /// <summary>
+    /// Retrieve the content area, this is where the emulator FrameBuffer will be displayed.
+    /// </summary>
+    private static (int x, int y, uint w, uint h) GetContentArea()
+    {
+        var fb = _window.FramebufferSize;
+        return (
+            x: PaddingPx,
+            y: PaddingPx,
+            w: (uint)Math.Max(0, fb.X - PaddingPx * 2),
+            h: (uint)Math.Max(0, fb.Y - PaddingPx * 2 - MenuBarReservePx)
+        );
     }
 }
