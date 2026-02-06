@@ -76,7 +76,7 @@ internal class Program
                 {
                     if (ImGui.MenuItem("Exit")) _window.Close();
                    
-                    ImGui.EndMenu();
+                    ImGui.EndMenu(/*File*/);
                 }
                 
                 if (ImGui.BeginMenu("View"))
@@ -88,10 +88,10 @@ internal class Program
                         ScaleItem(4);
                         ScaleItem(5);
                         
-                        ImGui.EndMenu();
+                        ImGui.EndMenu(/*Scale*/);
                     }
                     
-                    ImGui.EndMenu();
+                    ImGui.EndMenu(/*View*/);
                 }
                 
                 ImGui.EndMainMenuBar();
