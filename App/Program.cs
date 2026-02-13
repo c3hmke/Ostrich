@@ -3,7 +3,6 @@
 
 using System.Drawing;
 using Emulation;
-using GameBoy;
 using ImGuiNET;
 using Silk.NET.Input;
 using Silk.NET.Maths;
@@ -20,7 +19,7 @@ internal class Program
     private static IInputContext   _input  = null!;
     private static ImGuiController _imGui  = null!;
 
-    private static IVideoSource    _video = null!;
+    private static IEmulator       _emu = null!;
     
     private static int  _scale = 3;                     // The current emulator scale
     private static int? _pendingScale;                  // New scale to be applied on change
@@ -29,7 +28,7 @@ internal class Program
     
     private static void Main()
     {
-        _video = new GBVideoSource();
+        _emu = new GameBoy.Emulator();
         
         // Create a Silk.NET window
         var windowOptions = WindowOptions.Default;
@@ -37,8 +36,8 @@ internal class Program
         windowOptions.WindowBorder = WindowBorder.Fixed;
         windowOptions.VSync = true;
         windowOptions.Size  = new Vector2D<int>(
-            (_video.Width  * _scale) + (PaddingPx * 2),
-            (_video.Height * _scale) + (PaddingPx * 2) + MenuBarReservePx);
+            (_emu.Screen.Width  * _scale) + (PaddingPx * 2),
+            (_emu.Screen.Height * _scale) + (PaddingPx * 2) + MenuBarReservePx);
         
         _window = Window.Create(windowOptions);
         
@@ -155,8 +154,8 @@ internal class Program
     {
         // Resize the window to the new scale
         _window.Size = new Vector2D<int>(
-            (_video.Width  * _scale) + (PaddingPx * 2),
-            (_video.Height * _scale) + (PaddingPx * 2) + MenuBarReservePx);
+            (_emu.Screen.Width  * _scale) + (PaddingPx * 2),
+            (_emu.Screen.Height * _scale) + (PaddingPx * 2) + MenuBarReservePx);
         
         // Recreate ImGui controller so it picks up new framebuffer size + rebuilds device objects
         _imGui.Dispose();

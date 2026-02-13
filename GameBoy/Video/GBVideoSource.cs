@@ -1,6 +1,6 @@
 ﻿using Emulation;
 
-namespace GameBoy;
+namespace GameBoy.Video;
 
 public class GBVideoSource : IVideoSource
 {

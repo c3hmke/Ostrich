@@ -20,4 +20,8 @@
       <ProjectReference Include="..\GameBoy\GameBoy.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="View\" />
+    </ItemGroup>
+
 </Project>
