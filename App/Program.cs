@@ -6,7 +6,6 @@ using App.View;
 using Emulation;
 using ImGuiNET;
 using Silk.NET.Input;
-using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.Windowing;
@@ -17,8 +16,10 @@ internal class Program
 {
     /// Application window configurations
     private static readonly WindowConfig WindowCfg = new();
+    private static readonly ImGuiUI      UI        = new();
+    private static IWindow               _window   = null!;
+    
     private static int? _pendingScale; // New scale to be applied on change
-    private static IWindow         _window = null!;
     
     /// Graphics configurations
     private static GL              _gl     = null!;
@@ -40,6 +41,8 @@ internal class Program
         windowOptions.Size  = WindowCfg.GetWindowSize(_emu.Screen);
         
         _window = Window.Create(windowOptions);
+        
+        
         
         // Load : Set up when window is loaded
         _window.Load += () =>
@@ -67,12 +70,16 @@ internal class Program
                 _pendingScale = null;
                 
                 ApplyWindowCfg();
+                
+                // TODO: Apply deferred vsync toggle here too (keeps render side clean).
             }
         }; 
 
         // Render : What to do when a frame is rendered
         _window.Render += delta =>
         {
+            UI.ResetFrameRequests();
+            
             // --- Window Clear ---
             _gl.ClearColor(Color.FromArgb(255, (int) (.45f * 255), (int) (.55f * 255), (int) (.60f * 255)));
             _gl.Clear((uint) ClearBufferMask.ColorBufferBit);
@@ -96,40 +103,17 @@ internal class Program
             
             // --- ImGui ---
             _imGui.Update((float) delta);               // Make sure ImGui is up-to-date
-            if (ImGui.BeginMainMenuBar())
+            UI.DrawMainMenuBar(WindowCfg);
+            
+            /// Handle UI Intents
+            if (UI.ExitRequested) _window.Close();
+            if (UI.PendingScale is int requestedScale) 
+                _pendingScale = requestedScale;
+            if (UI.ToggleVSyncRequested)
             {
-                if (ImGui.BeginMenu("File"))
-                {
-                    if (ImGui.MenuItem("Exit")) _window.Close();
-                   
-                    ImGui.EndMenu(/*File*/);
-                }
-                
-                if (ImGui.BeginMenu("View"))
-                {
-                    if (ImGui.BeginMenu("Scale"))
-                    {
-                        ScaleItem(2);
-                        ScaleItem(3);
-                        ScaleItem(4);
-                        ScaleItem(5);
-                        
-                        ImGui.EndMenu(/*Scale*/);
-                    }
-
-                    bool isVSyncEnabled = WindowCfg.VSyncEnabled;
-                    if (ImGui.Checkbox("VSync", ref isVSyncEnabled))
-                    {
-                        _window.VSync = !_window.VSync;
-                        WindowCfg.VSyncEnabled = _window.VSync;
-                    }
-                    
-                    ImGui.EndMenu(/*View*/);
-                }
-                
-                ImGui.EndMainMenuBar();
+                WindowCfg.VSyncEnabled = !WindowCfg.VSyncEnabled;
+                _window.VSync = WindowCfg.VSyncEnabled;
             }
-            //ImGui.ShowDemoWindow(); // Built-in demo window
 
             _imGui.Render();
         };
@@ -142,13 +126,6 @@ internal class Program
 
         _window.Run();          // Run runs the render loop and blocks until return
         _window.Dispose();      // At which point we can dispose the window.
-    }
-    
-    private static void ScaleItem(int scale)
-    {
-        bool selected = WindowCfg.Scale == scale;       // Set selected scale in menu
-        if (ImGui.MenuItem($"{scale}x", "", selected))  // Apply the scaling
-            _pendingScale = scale;
     }
     
     private static void ApplyWindowCfg()
@@ -165,18 +142,4 @@ internal class Program
         // Keep window VSync aligned with config
         _window.VSync = WindowCfg.VSyncEnabled;
     }
-    
-    // /// <summary>
-    // /// Retrieve the content area, this is where the emulator FrameBuffer will be displayed.
-    // /// </summary>
-    // private static (int x, int y, uint w, uint h) GetContentArea()
-    // {
-    //     var fb = _window.FramebufferSize;
-    //     return (
-    //         x: PaddingPx,
-    //         y: PaddingPx,
-    //         w: (uint)Math.Max(0, fb.X - PaddingPx * 2),
-    //         h: (uint)Math.Max(0, fb.Y - PaddingPx * 2 - MenuBarReservePx)
-    //     );
-    // }
 }
