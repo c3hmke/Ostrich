@@ -2,6 +2,7 @@
 //                                             "correct context" SIGABRT happens on other resources resulting in dirty exit.
 
 using System.Drawing;
+using App.View;
 using Emulation;
 using ImGuiNET;
 using Silk.NET.Input;
@@ -14,17 +15,18 @@ namespace App;
 
 internal class Program
 {
+    /// Application window configurations
+    private static readonly WindowConfig WindowCfg = new();
+    private static int? _pendingScale; // New scale to be applied on change
     private static IWindow         _window = null!;
+    
+    /// Graphics configurations
     private static GL              _gl     = null!;
     private static IInputContext   _input  = null!;
     private static ImGuiController _imGui  = null!;
 
+    /// Emulator core
     private static IEmulator       _emu = null!;
-    
-    private static int  _scale = 3;                     // The current emulator scale
-    private static int? _pendingScale;                  // New scale to be applied on change
-    private const  int  MenuBarReservePx = 18;          // Number of pixels to preserve for menu bar
-    private const  int  PaddingPx = 16;                 // Padding around the content area
     
     private static void Main()
     {
@@ -34,10 +36,8 @@ internal class Program
         var windowOptions = WindowOptions.Default;
         
         windowOptions.WindowBorder = WindowBorder.Fixed;
-        windowOptions.VSync = true;
-        windowOptions.Size  = new Vector2D<int>(
-            (_emu.Screen.Width  * _scale) + (PaddingPx * 2),
-            (_emu.Screen.Height * _scale) + (PaddingPx * 2) + MenuBarReservePx);
+        windowOptions.VSync = WindowCfg.VSyncEnabled;
+        windowOptions.Size  = WindowCfg.GetWindowSize(_emu.Screen);
         
         _window = Window.Create(windowOptions);
         
@@ -54,19 +54,19 @@ internal class Program
             var fb = _window.FramebufferSize;
             _gl.Viewport(0, 0, (uint)fb.X, (uint)fb.Y);
             
-            ApplyScale();
+            ApplyWindowCfg();
         };
         
         // Update : Changes to be made when window itself is modified
         _window.Update += delta =>
         {
             // Defer window resizes to avoid native re-entrancy / segfaults
-            if (_pendingScale.HasValue && _pendingScale != _scale)
+            if (_pendingScale.HasValue && _pendingScale != WindowCfg.Scale)
             {
-                _scale = _pendingScale.Value;
+                WindowCfg.Scale = _pendingScale.Value;
                 _pendingScale = null;
                 
-                ApplyScale();
+                ApplyWindowCfg();
             }
         }; 
 
@@ -79,7 +79,7 @@ internal class Program
             
             // --- Content Area Setup ---
             var fb =  _window.FramebufferSize;
-            (int cx, int cy, uint cw, uint ch) = GetContentArea();
+            (int cx, int cy, uint cw, uint ch) = WindowCfg.GetContentArea(fb);
             
             _gl.Viewport(cx, cy, cw, ch);               // Set the Viewport size
             
@@ -117,10 +117,11 @@ internal class Program
                         ImGui.EndMenu(/*Scale*/);
                     }
 
-                    bool isVSyncEnabled = _window.VSync;
+                    bool isVSyncEnabled = WindowCfg.VSyncEnabled;
                     if (ImGui.Checkbox("VSync", ref isVSyncEnabled))
                     {
                         _window.VSync = !_window.VSync;
+                        WindowCfg.VSyncEnabled = _window.VSync;
                     }
                     
                     ImGui.EndMenu(/*View*/);
@@ -145,37 +146,37 @@ internal class Program
     
     private static void ScaleItem(int scale)
     {
-        bool selected = _scale == scale;                // Set selected scale in menu
+        bool selected = WindowCfg.Scale == scale;       // Set selected scale in menu
         if (ImGui.MenuItem($"{scale}x", "", selected))  // Apply the scaling
             _pendingScale = scale;
     }
     
-    private static void ApplyScale()
+    private static void ApplyWindowCfg()
     {
-        // Resize the window to the new scale
-        _window.Size = new Vector2D<int>(
-            (_emu.Screen.Width  * _scale) + (PaddingPx * 2),
-            (_emu.Screen.Height * _scale) + (PaddingPx * 2) + MenuBarReservePx);
-        
-        // Recreate ImGui controller so it picks up new framebuffer size + rebuilds device objects
+        // Size based on emulator-reported resolution + current view config
+        _window.Size = WindowCfg.GetWindowSize(_emu.Screen);
+
+        // Recreate ImGui controller so it picks up the new framebuffer size and rebuilds device objects.
         _imGui.Dispose();
         _imGui = new ImGuiController(_gl, _window, _input);
-        
-        // Reapply IO flag (This is a safety tweak)
+
         ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
+
+        // Keep window VSync aligned with config
+        _window.VSync = WindowCfg.VSyncEnabled;
     }
     
-    /// <summary>
-    /// Retrieve the content area, this is where the emulator FrameBuffer will be displayed.
-    /// </summary>
-    private static (int x, int y, uint w, uint h) GetContentArea()
-    {
-        var fb = _window.FramebufferSize;
-        return (
-            x: PaddingPx,
-            y: PaddingPx,
-            w: (uint)Math.Max(0, fb.X - PaddingPx * 2),
-            h: (uint)Math.Max(0, fb.Y - PaddingPx * 2 - MenuBarReservePx)
-        );
-    }
+    // /// <summary>
+    // /// Retrieve the content area, this is where the emulator FrameBuffer will be displayed.
+    // /// </summary>
+    // private static (int x, int y, uint w, uint h) GetContentArea()
+    // {
+    //     var fb = _window.FramebufferSize;
+    //     return (
+    //         x: PaddingPx,
+    //         y: PaddingPx,
+    //         w: (uint)Math.Max(0, fb.X - PaddingPx * 2),
+    //         h: (uint)Math.Max(0, fb.Y - PaddingPx * 2 - MenuBarReservePx)
+    //     );
+    // }
 }
