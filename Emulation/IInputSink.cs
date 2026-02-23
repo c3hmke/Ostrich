@@ -1,6 +1,5 @@
 namespace Emulation;
 
-
 /// <summary>
 /// Receives input events from a frontend. The emulator owns how these
 /// affect its internal controller state.
@@ -11,7 +10,15 @@ public interface IInputSink
 }
 
 /// <summary>
-/// Buttons common on emulated systems
+/// Read-Only view of the current button state.
+/// </summary>
+public interface IInputState
+{
+    bool IsPressed(GameButton button);
+}
+
+/// <summary>
+/// Buttons common on emulated systems.
 /// </summary>
 public enum GameButton
 {

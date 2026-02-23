@@ -15,13 +15,8 @@ namespace Emulation;
 /// </summary>
 public interface IEmulator
 {
-    /// <summary>
-    /// Exposes the emulator’s video output in a presentation-agnostic way.
-    /// </summary>
     IVideoSource Screen { get; }
-    
-    /// <summary>
-    /// Expose the InputSink used to connect UI inputs to the emulator.
-    /// </summary>
     IInputSink   Input  { get; }
+    
+    IInputState  InputState { get; }
 }
