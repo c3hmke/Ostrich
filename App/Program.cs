@@ -2,6 +2,7 @@
 //                                             "correct context" SIGABRT happens on other resources resulting in dirty exit.
 
 using System.Drawing;
+using App.Input;
 using App.View;
 using Emulation;
 using ImGuiNET;
@@ -15,16 +16,18 @@ namespace App;
 internal class Program
 {
     /// Application window configurations
-    private static readonly WindowConfig WindowCfg = new();
-    private static readonly ImGuiUI      UI        = new();
-    private static IWindow               _window   = null!;
+    private static readonly WindowConfig  WindowCfg = new();
+    private static readonly ImGuiUI       UI        = new();
+    private static readonly InputBindings bindings  = new();
+    private static KeyboardInput          _input    = null!;
+    private static IWindow                _window   = null!;
     
     private static int? _pendingScale; // New scale to be applied on change
     
     /// Graphics configurations
-    private static GL              _gl     = null!;
-    private static IInputContext   _input  = null!;
-    private static ImGuiController _imGui  = null!;
+    private static GL              _gl        = null!;
+    private static IInputContext   _inputCtx  = null!;
+    private static ImGuiController _imGui     = null!;
 
     /// Emulator core
     private static IEmulator       _emu = null!;
@@ -58,9 +61,13 @@ internal class Program
 
     private static void OnLoad()
     {
-        _gl    = GL.GetApi(_window);
-        _input = _window.CreateInput();
-        _imGui = new ImGuiController(_gl, _window, _input);
+        _inputCtx = _window.CreateInput();
+        _input    = new KeyboardInput(_emu.Input, bindings);
+
+        _input.Attach(_inputCtx);
+
+        _gl       = GL.GetApi(_window);
+        _imGui    = new ImGuiController(_gl, _window, _inputCtx);
             
         ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
             
@@ -134,7 +141,7 @@ internal class Program
 
         // Recreate ImGui controller so it picks up the new framebuffer size and rebuilds device objects.
         _imGui.Dispose();
-        _imGui = new ImGuiController(_gl, _window, _input);
+        _imGui = new ImGuiController(_gl, _window, _inputCtx);
 
         ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 
