@@ -2,6 +2,7 @@
 //                                             "correct context" SIGABRT happens on other resources resulting in dirty exit.
 
 using System.Drawing;
+using App.Config;
 using App.Input;
 using App.View;
 using Emulation;
@@ -18,7 +19,8 @@ internal class Program
     /// Application window configurations
     private static readonly WindowConfig  WindowCfg = new();
     private static readonly ImGuiUI       UI        = new();
-    private static readonly InputBindings bindings  = new();
+    private static InputBindings          _bindings = null!;
+    private static AppConfig              _cfg      = null!;
     private static KeyboardInput          _input    = null!;
     private static IWindow                _window   = null!;
     
@@ -34,6 +36,15 @@ internal class Program
     
     private static void Main()
     {
+        // Load app configurations
+        _cfg = ConfigStore.Load();
+
+        WindowCfg.Scale        = _cfg.Window.Scale;
+        WindowCfg.VSyncEnabled = _cfg.Window.VSyncEnabled;
+
+        _bindings = new InputBindings(LoadBindings(_cfg));
+        
+        // Create an emulator instance
         _emu = new GameBoy.Emulator();
         
         // Create a Silk.NET window
@@ -49,8 +60,7 @@ internal class Program
         _window.Load    += OnLoad;       // Set up when window is loaded
         _window.Update  += OnUpdate;     // Changes to be made when window itself is modified
         _window.Render  += OnRender;     // What to do when a frame is rendered
-        _window.Closing += ()            // Clean up on exit
-            => _imGui.Dispose();
+        _window.Closing += OnClosing;    // Clean up on exit
         
         _window.FramebufferResize +=     // Handle what happens when window size changes
             (size) => _gl.Viewport(0, 0, (uint)size.X, (uint)size.Y);
@@ -62,7 +72,7 @@ internal class Program
     private static void OnLoad()
     {
         _inputCtx = _window.CreateInput();
-        _input    = new KeyboardInput(_emu.Input, bindings);
+        _input    = new KeyboardInput(_emu.Input, _bindings);
 
         _input.Attach(_inputCtx);
 
@@ -120,7 +130,7 @@ internal class Program
         // --- ImGui ---
         _imGui.Update((float) delta);               // Make sure ImGui is up-to-date
         UI.DrawMainMenuBar(WindowCfg);
-        UI.DrawControlsWindow(bindings, _input);
+        UI.DrawControlsWindow(_bindings, _input);
         
         // --------- Input test code ----------------
         ImGui.SetNextWindowBgAlpha(0.35f);
@@ -160,6 +170,22 @@ internal class Program
 
         _imGui.Render();
     }
+
+    private static void OnClosing()
+    {
+        SaveAppConfig();
+        _imGui.Dispose();
+    }
+    
+    private static void SaveAppConfig()
+    {
+        _cfg.Window.Scale = WindowCfg.Scale;
+        _cfg.Window.VSyncEnabled = WindowCfg.VSyncEnabled;
+
+        _cfg.Input.ButtonToKey = _bindings.All.ToDictionary(kv => kv.Key, kv => kv.Value.ToString());
+
+        ConfigStore.Save(_cfg);
+    }
     
     private static void ApplyWindowCfg()
     {
@@ -174,5 +200,30 @@ internal class Program
 
         // Keep window VSync aligned with config
         _window.VSync = WindowCfg.VSyncEnabled;
+    }
+    
+    private static Dictionary<GameButton, Key> LoadBindings(AppConfig cfg)
+    {
+        var dict = new Dictionary<GameButton, Key>();
+
+        foreach (var kv in cfg.Input.ButtonToKey)
+        {
+            if (Enum.TryParse<Key>(kv.Value, ignoreCase: true, out var key))
+                dict[kv.Key] = key;
+        }
+
+        // Ensure required buttons exist (fallbacks)
+        void Ensure(GameButton b, Key k) { if (!dict.ContainsKey(b)) dict[b] = k; }
+
+        Ensure(GameButton.Up, Key.Up);
+        Ensure(GameButton.Down, Key.Down);
+        Ensure(GameButton.Left, Key.Left);
+        Ensure(GameButton.Right, Key.Right);
+        Ensure(GameButton.A, Key.Z);
+        Ensure(GameButton.B, Key.X);
+        Ensure(GameButton.Start, Key.Enter);
+        Ensure(GameButton.Select, Key.Backspace);
+
+        return dict;
     }
 }
