@@ -8,6 +8,15 @@ namespace App.Input;
 /// </summary>
 public sealed class KeyboardInput (IInputSink sink, InputBindings bindings)
 {
+    /// <summary>
+    /// The last key pressed, regardless of mapping. Used to remap inputs. 
+    /// </summary>
+    public Key? LastKeyDown { get; private set; }
+    public void ClearLastKeyDown() => LastKeyDown = null;
+
+    /// <summary>
+    /// Attach an external input device to the App inputs.
+    /// </summary>
     public void Attach(IInputContext inputContext)
     {
         // Attach to all connected keyboards
@@ -20,13 +29,15 @@ public sealed class KeyboardInput (IInputSink sink, InputBindings bindings)
     
     private void OnKeyDown(IKeyboard keyboard, Key key, int _)
     {
-        if (bindings.KeyToButton.TryGetValue(key, out var btn))
+        LastKeyDown = key;
+        
+        if (bindings.TryGetButtonForKey(key, out var btn))
             sink.SetButton(button: btn, pressed: true);
     }
 
     private void OnKeyUp(IKeyboard keyboard, Key key, int _)
     {
-        if (bindings.KeyToButton.TryGetValue(key, out var btn))
+        if (bindings.TryGetButtonForKey(key, out var btn))
             sink.SetButton(button: btn, pressed: false);
     }
 }

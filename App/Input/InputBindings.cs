@@ -8,20 +8,40 @@ using Silk.NET.Input;
 /// </summary>
 public class InputBindings
 {
-    public readonly Dictionary<Key, GameButton> KeyToButton = new()
+    /// <summary>
+    /// Map of keys and the buttons they're bound to.
+    /// </summary>
+    private readonly Dictionary<GameButton, Key> _buttonMap = new()
     {
-        // D-Pad
-        [Key.Up]    = GameButton.Up,
-        [Key.Down]  = GameButton.Down,
-        [Key.Left]  = GameButton.Left,
-        [Key.Right] = GameButton.Right,
-        
-        // Face Buttons
-        [Key.Z] = GameButton.A,
-        [Key.X] = GameButton.B,
-        
-        // Func Buttons
-        [Key.Enter]     = GameButton.Start,
-        [Key.Backspace] = GameButton.Select,
+        [GameButton.Up]     = Key.Up,
+        [GameButton.Down]   = Key.Down,
+        [GameButton.Left]   = Key.Left,
+        [GameButton.Right]  = Key.Right,
+        [GameButton.A]      = Key.Z,
+        [GameButton.B]      = Key.X,
+        [GameButton.Start]  = Key.Enter,
+        [GameButton.Select] = Key.Backspace,
     };
+    public IReadOnlyDictionary<GameButton, Key> All => _buttonMap;
+    
+    public Key GetKey(GameButton button) 
+        => _buttonMap[button];
+    
+    public void Rebind(GameButton button, Key newKey) 
+        => _buttonMap[button] = newKey;
+    
+    public bool TryGetButtonForKey(Key key, out GameButton button)
+    {
+        foreach (var kv in _buttonMap)
+        {
+            if (kv.Value == key)
+            {
+                button = kv.Key;
+                return true;
+            }
+        }
+
+        button = default;
+        return false;
+    }
 }

@@ -120,6 +120,7 @@ internal class Program
         // --- ImGui ---
         _imGui.Update((float) delta);               // Make sure ImGui is up-to-date
         UI.DrawMainMenuBar(WindowCfg);
+        UI.DrawControlsWindow(bindings, _input);
         
         // --------- Input test code ----------------
         ImGui.SetNextWindowBgAlpha(0.35f);
