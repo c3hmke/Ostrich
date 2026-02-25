@@ -26,6 +26,11 @@ public class ImGuiUI
 
         if (ImGui.BeginMenu("File"))
         {
+            if (ImGui.MenuItem("Open ROM"))
+            {
+                ImGui.OpenPopup("Open Rom");
+            }
+            
             if (ImGui.MenuItem("Exit"))
                 ExitRequested = true;
 

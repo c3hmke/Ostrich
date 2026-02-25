@@ -19,4 +19,6 @@ public interface IEmulator
     IInputSink   Input  { get; }
     
     IInputState  InputState { get; }
+
+    void LoadROM(byte[] rom, string path);
 }
