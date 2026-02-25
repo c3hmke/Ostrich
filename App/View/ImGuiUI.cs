@@ -12,6 +12,7 @@ public class ImGuiUI
 {
     public int? PendingScale         { get; private set; }
     public bool ToggleVSyncRequested { get; private set; }
+    public bool ConfigSaveRequested  { get; private set; }
     public bool ExitRequested        { get; private set; }
     
     // Controls UI state
@@ -104,6 +105,7 @@ public class ImGuiUI
             if (keyboardInput.LastKeyDown is Key k)
             {
                 bindings.Rebind(b, k);
+                ConfigSaveRequested  = true;
                 PendingRebindButton = null;
                 keyboardInput.ClearLastKeyDown();
             }
@@ -117,6 +119,7 @@ public class ImGuiUI
     {
         PendingScale = null;
         ToggleVSyncRequested = false;
+        ConfigSaveRequested = false;
         ExitRequested = false;
     }
 

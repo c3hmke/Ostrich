@@ -97,7 +97,8 @@ internal class Program
             _pendingScale = null;
                 
             ApplyWindowCfg();
-                
+            
+            if (UI.ConfigSaveRequested) SaveAppConfig();
             // TODO: Apply deferred vsync toggle here too (keeps render side clean).
         }
     }
