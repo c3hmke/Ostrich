@@ -82,7 +82,7 @@ public class ImGuiUI
             if (ImGui.Button("..."))
             {
                 var result = Dialog.FileOpen(
-                    filterList:  "Game Boy ROMs: gb,gbc,gba",
+                    filterList:  "gb,gbc,gba",
                     defaultPath: lastROMDir ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
                 
                 if (result.IsOk && !string.IsNullOrWhiteSpace(result.Path))
