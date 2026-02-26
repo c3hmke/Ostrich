@@ -133,13 +133,18 @@ internal class Program
         UI.DrawMainMenuBar(WindowCfg);              // Draw the top menu bar in application
         UI.DrawControlsWindow(_bindings, _input);   // Draw rebind menu if active
         
-        UI.DrawOpenRomModal();                      // Draw ROM load dialogue if active
+        UI.DrawOpenRomModal(_cfg.ROMDirectory);     // Draw ROM load dialogue if active
         if (UI.OpenROMRequested && !string.IsNullOrWhiteSpace(UI.PendingROMPath))
         {
+            var path = UI.PendingROMPath;
+            
             try
             {
-                var bytes = File.ReadAllBytes(UI.PendingROMPath);
-                _emu.LoadROM(bytes, UI.PendingROMPath);
+                var bytes = File.ReadAllBytes(path);
+                _emu.LoadROM(bytes, path);
+
+                _cfg.ROMDirectory = Path.GetDirectoryName(path) ?? _cfg.ROMDirectory;
+                ConfigStore.Save(_cfg);
             }
             catch (Exception e) { Console.Error.WriteLine(e.Message); }
         }

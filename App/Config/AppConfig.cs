@@ -3,12 +3,14 @@ using Emulation;
 namespace App.Config;
 
 /// <summary>
-/// Used to persist user configuration.
+/// Configuration and settings persisted across sessions.
 /// </summary>
 public class AppConfig
 {
-    public WindowConfigDTO  Window { get; set; } = new();
-    public InputBindingsDTO Input  { get; set; } = new();
+    public WindowConfigDTO  Window  { get; set; } = new();  // Window configuration options
+    public InputBindingsDTO Input   { get; set; } = new();  // Input bindings 
+    
+    public string? ROMDirectory     { get; set; }           // Path to last successful ROM load.
 }
 
 public sealed class WindowConfigDTO

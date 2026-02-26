@@ -67,9 +67,8 @@ public class ImGuiUI
     public string? PendingROMPath      { get;  private set; }
     private bool   _romLoadWindowOpen;
     private string _romPathBuffer = "";
-    private string _startDir;
     
-    public void DrawOpenRomModal()
+    public void DrawOpenRomModal(string? lastROMDir)
     {
         if (_romLoadWindowOpen)
             ImGui.OpenPopup("Open ROM");
@@ -82,17 +81,12 @@ public class ImGuiUI
             ImGui.SameLine();
             if (ImGui.Button("..."))
             {
-                // If a rom was loaded, then make that the starting directory
-                if (!string.IsNullOrWhiteSpace(_romPathBuffer) && File.Exists(_romPathBuffer))
-                    _startDir = Path.GetDirectoryName(_romPathBuffer)!;
-                else
-                    _startDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                var result = Dialog.FileOpen(
+                    filterList:  "Game Boy ROMs: gb,gbc,gba",
+                    defaultPath: lastROMDir ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
                 
-                var result = Dialog.FileOpen("Game Boy ROMs: gb,gbc,gba", _startDir);
                 if (result.IsOk && !string.IsNullOrWhiteSpace(result.Path))
-                {
                     _romPathBuffer = result.Path;
-                }
             }
 
             if (ImGui.Button("Open"))
