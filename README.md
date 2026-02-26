@@ -2,6 +2,10 @@
 
 A simple Game Boy emulator written in C# using SDL2 and ImGUI.
 
+### FAQs
+
+ - ROM selection: If you're on Linux using some minimal VM you'll have to enter the path manually.
+
 ### Display
 
 The display uses only integer scaling in relation to the emulators display buffer. This is so that the rendered image

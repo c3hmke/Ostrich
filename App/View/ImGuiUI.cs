@@ -1,6 +1,7 @@
 using App.Input;
 using Emulation;
 using ImGuiNET;
+using NativeFileDialogSharp;
 using Silk.NET.Input;
 
 namespace App.View;
@@ -74,8 +75,19 @@ public class ImGuiUI
 
         if (ImGui.BeginPopupModal("Open ROM", ref _romLoadWindowOpen, ImGuiWindowFlags.AlwaysAutoResize))
         {
-            ImGui.TextUnformatted("Enter ROM path:");
+            ImGui.TextUnformatted("ROM Path:");
             ImGui.InputText("##rompath", ref _romPathBuffer, 4096);
+            
+            ImGui.SameLine();
+            if (ImGui.Button("Browse..."))
+            {
+                var result = Dialog.FileOpen("Game Boy ROMs:gb,gbc,gba;All Files:*");
+
+                if (result.IsOk && !string.IsNullOrWhiteSpace(result.Path))
+                {
+                    _romPathBuffer = result.Path;
+                }
+            }
 
             if (ImGui.Button("Open"))
             {
@@ -87,7 +99,6 @@ public class ImGuiUI
             }
 
             ImGui.SameLine();
-
             if (ImGui.Button("Cancel"))
             {
                 _romLoadWindowOpen = false;
