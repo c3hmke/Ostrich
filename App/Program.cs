@@ -31,8 +31,9 @@ internal class Program
     private static IInputContext   _inputCtx  = null!;
     private static ImGuiController _imGui     = null!;
 
-    /// Emulator core
+    /// Emulator functions
     private static IEmulator       _emu = null!;
+    private static string?         _currentROMPath;
     
     private static void Main()
     {
@@ -115,9 +116,9 @@ internal class Program
         var fb =  _window.FramebufferSize;
         (int cx, int cy, uint cw, uint ch) = WindowCfg.GetContentArea(fb);
             
-        _gl.Viewport(cx, cy, cw, ch);               // Set the Viewport size
+        _gl.Viewport(cx, cy, cw, ch);                   // Set the Viewport size
             
-        _gl.Enable(GLEnum.ScissorTest);             // Hard clip so nothing can draw into the padding area
+        _gl.Enable(GLEnum.ScissorTest);                 // Hard clip so nothing can draw into the padding area
         _gl.Scissor(cx, cy, cw, ch); 
             
         // !! TEMP !! visualize the content area
@@ -125,15 +126,29 @@ internal class Program
         _gl.Clear((uint)ClearBufferMask.ColorBufferBit);
         // !! ---- !!
             
-        _gl.Disable(GLEnum.ScissorTest);            // End to the ContentArea
-        _gl.Viewport(0, 0, (uint)fb.X, (uint)fb.Y); // Restore so ImGui draws correctly
+        _gl.Disable(GLEnum.ScissorTest);                // End to the ContentArea
+        _gl.Viewport(0, 0, (uint)fb.X, (uint)fb.Y);     // Restore so ImGui draws correctly
             
         // --- ImGui ---
-        _imGui.Update((float) delta);               // Make sure ImGui is up-to-date
-        UI.DrawMainMenuBar(WindowCfg);              // Draw the top menu bar in application
-        UI.DrawControlsWindow(_bindings, _input);   // Draw rebind menu if active
+        _imGui.Update((float) delta);                   // Make sure ImGui is up-to-date
+        UI.DrawMainMenuBar(WindowCfg, _currentROMPath); // Draw the top menu bar in application
+        UI.DrawControlsWindow(_bindings, _input);       // Draw rebind menu if active
+        UI.DrawOpenRomModal(_cfg.ROMDirectory);         // Draw ROM load dialogue if active
         
-        UI.DrawOpenRomModal(_cfg.ROMDirectory);     // Draw ROM load dialogue if active
+        if (UI.ReloadROMRequested)
+        {
+            if (!string.IsNullOrWhiteSpace(_currentROMPath) && File.Exists(_currentROMPath))
+            {
+                try
+                {
+                    var bytes = File.ReadAllBytes(_currentROMPath);
+                    _emu.LoadROM(bytes, _currentROMPath);
+                }
+                catch (Exception e) { Console.Error.WriteLine(e.Message); }
+            }
+            else Console.Error.WriteLine("No ROM loaded (or file missing), cannot reload.");
+        }
+        
         if (UI.OpenROMRequested && !string.IsNullOrWhiteSpace(UI.PendingROMPath))
         {
             var path = UI.PendingROMPath;
@@ -143,6 +158,7 @@ internal class Program
                 var bytes = File.ReadAllBytes(path);
                 _emu.LoadROM(bytes, path);
 
+                _currentROMPath   = path;
                 _cfg.ROMDirectory = Path.GetDirectoryName(path) ?? _cfg.ROMDirectory;
                 ConfigStore.Save(_cfg);
             }

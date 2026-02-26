@@ -14,19 +14,27 @@ public class ImGuiUI
     /***********************************************************************************************************\
      *                                             MAIN MENU                                                   *
     \***********************************************************************************************************/
-    public void DrawMainMenuBar(WindowConfig windowCfg)
+    public void DrawMainMenuBar(WindowConfig windowCfg, string? currentROMPath)
     {
         if (!ImGui.BeginMainMenuBar())
             return;
 
         if (ImGui.BeginMenu("File"))
         {
+            ImGui.BeginDisabled(string.IsNullOrWhiteSpace(currentROMPath));
+            if (ImGui.MenuItem("Reload ROM"))
+                ReloadROMRequested = true;
+            ImGui.EndDisabled();
+
+            ImGui.Separator();
+            
             if (ImGui.MenuItem("Open ROM..."))
             {
                 _romLoadWindowOpen = true;
                 ImGui.OpenPopup("Open ROM");
             }
             
+            ImGui.Separator();
             
             if (ImGui.MenuItem("Exit")) ExitRequested = true;
 
@@ -64,6 +72,7 @@ public class ImGuiUI
      *                                               ROM LOADING                                               *
     \***********************************************************************************************************/
     public bool    OpenROMRequested    { get; private set; }
+    public bool    ReloadROMRequested  { get; private set; }
     public string? PendingROMPath      { get;  private set; }
     private bool   _romLoadWindowOpen;
     private string _romPathBuffer = "";
@@ -184,6 +193,7 @@ public class ImGuiUI
         PendingROMPath = null;
         
         OpenROMRequested = false;
+        ReloadROMRequested = false;
         ToggleVSyncRequested = false;
         ConfigSaveRequested = false;
         ExitRequested = false;
