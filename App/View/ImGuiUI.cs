@@ -10,15 +10,9 @@ namespace App.View;
 /// </summary>
 public class ImGuiUI
 {
-    public int? PendingScale         { get; private set; }
-    public bool ToggleVSyncRequested { get; private set; }
-    public bool ConfigSaveRequested  { get; private set; }
-    public bool ExitRequested        { get; private set; }
-    
-    // Controls UI state
-    public bool ControlsWindowOpen { get; private set; }
-    public GameButton? PendingRebindButton { get; private set; }
-
+    /***********************************************************************************************************\
+     *                                             MAIN MENU                                                   *
+    \***********************************************************************************************************/
     public void DrawMainMenuBar(WindowConfig windowCfg)
     {
         if (!ImGui.BeginMainMenuBar())
@@ -26,13 +20,14 @@ public class ImGuiUI
 
         if (ImGui.BeginMenu("File"))
         {
-            if (ImGui.MenuItem("Open ROM"))
+            if (ImGui.MenuItem("Open ROM..."))
             {
-                ImGui.OpenPopup("Open Rom");
+                _romLoadWindowOpen = true;
+                ImGui.OpenPopup("Open ROM");
             }
             
-            if (ImGui.MenuItem("Exit"))
-                ExitRequested = true;
+            
+            if (ImGui.MenuItem("Exit")) ExitRequested = true;
 
             ImGui.EndMenu(/* File */);
         }
@@ -64,10 +59,51 @@ public class ImGuiUI
         ImGui.EndMainMenuBar();
     }
     
-    /// <summary>
-    /// Draws the controls window and updates bindings when a rebind is completed.
-    /// Call this every frame after DrawMainMenuBar.
-    /// </summary>
+    /***********************************************************************************************************\
+     *                                               ROM LOADING                                               *
+    \***********************************************************************************************************/
+    public bool    OpenROMRequested    { get; private set; }
+    public string? PendingROMPath      { get;  private set; }
+    private bool   _romLoadWindowOpen;
+    private string _romPathBuffer = "";
+    
+    public void DrawOpenRomModal()
+    {
+        if (_romLoadWindowOpen)
+            ImGui.OpenPopup("Open ROM");
+
+        if (ImGui.BeginPopupModal("Open ROM", ref _romLoadWindowOpen, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.TextUnformatted("Enter ROM path:");
+            ImGui.InputText("##rompath", ref _romPathBuffer, 4096);
+
+            if (ImGui.Button("Open"))
+            {
+                PendingROMPath = _romPathBuffer.Trim();
+                OpenROMRequested = true;
+
+                _romLoadWindowOpen = false;
+                ImGui.CloseCurrentPopup();
+            }
+
+            ImGui.SameLine();
+
+            if (ImGui.Button("Cancel"))
+            {
+                _romLoadWindowOpen = false;
+                ImGui.CloseCurrentPopup();
+            }
+
+            ImGui.EndPopup();
+        }
+    }
+    
+    /***********************************************************************************************************\
+     *                                            CONTROL MAPPING                                              *
+    \***********************************************************************************************************/
+    public  bool ControlsWindowOpen        { get; private set; }
+    public GameButton? PendingRebindButton { get; private set; }
+    
     public void DrawControlsWindow(InputBindings bindings, KeyboardInput keyboardInput)
     {
         if (!ControlsWindowOpen)
@@ -118,16 +154,31 @@ public class ImGuiUI
 
         ImGui.End();
     }
-
     
+    /***********************************************************************************************************\
+     *                                            GENERAL HELPERS                                              *
+    \***********************************************************************************************************/
+    // General update flags from the menu. These run OnUpdate.
+    public bool ConfigSaveRequested  { get; private set; }
+    public bool ExitRequested        { get; private set; }
+    
+    // Window controls
+    public bool ToggleVSyncRequested { get; private set; }
+    public int? PendingScale         { get; private set; }
+    
+    /// <summary> Function to clear all requests so the menu stops blocking. </summary>
     public void ResetFrameRequests()
     {
         PendingScale = null;
+        PendingROMPath = null;
+        
+        OpenROMRequested = false;
         ToggleVSyncRequested = false;
         ConfigSaveRequested = false;
         ExitRequested = false;
     }
 
+    /// <summary> Function to change the integer scaling on the window. </summary>
     private void ScaleItem(int scale, int currentScale)
     {
         bool selected = currentScale == scale;
@@ -135,6 +186,7 @@ public class ImGuiUI
             PendingScale = scale;
     }
     
+    /// <summary> Menu item used to rebind controls for the emulator. </summary>
     private void DrawRebindRow(InputBindings bindings, KeyboardInput keyboardInput, GameButton button)
     {
         var key = bindings.GetKey(button);

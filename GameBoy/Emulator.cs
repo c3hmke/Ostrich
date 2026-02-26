@@ -15,6 +15,7 @@ public class Emulator : IEmulator
     public byte[]? ROM     { get; private set; }
     public string? ROMPath { get; private set; }
 
+    /// <summary> Load a ROM into memory and reset the core. </summary>
     public void LoadROM(byte[] rom, string path)
     {
         if (rom == null || rom.Length < 0x150)
