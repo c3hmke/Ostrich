@@ -6,6 +6,14 @@ A simple Game Boy emulator written in C# using SDL2 and ImGUI.
 
  - ROM selection: If you're on Linux using some minimal VM you'll have to enter the path manually.
 
+### Dev requirements
+
+- Dotnet SDK 10
+- libsdl2 & libglfw3
+
+on UbuntuDebian using Wayland install the following packages:<br/>
+`sudo apt install dotnet-sdk-10.0 libglfw3 libsdl2-2.0-0 libgl1 libegl1 libx11-6 libwayland-client0`
+
 ### Display
 
 The display uses only integer scaling in relation to the emulators display buffer. This is so that the rendered image
@@ -35,3 +43,4 @@ GameBoy (Core), implements the contracts and holds knowledge of the emulated har
 
 Ostrich.App       ──▶  Ostrich.Emulation
 Ostrich.GameBoy   ──▶  Ostrich.Emulation
+
