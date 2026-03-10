@@ -15,10 +15,24 @@ namespace Emulation;
 /// </summary>
 public interface IEmulator
 {
-    IVideoSource Screen { get; }
-    IInputSink   Input  { get; }
+    IVideoSource Screen      { get; }   // Interact with the screen.
+    IInputSink   Input       { get; }   // Used to capture all user input.
+    IInputState  InputState  { get; }   // Current state of user input.
     
-    IInputState  InputState { get; }
+    bool         IsROMLoaded { get; }   // Lifecycle hook for FE.
 
+    /// <summary>
+    /// Restore the machine state without requiring a new instance
+    /// </summary>
+    void Reset();
+    
+    /// <summary>
+    /// Load a ROM into the internal memory.
+    /// </summary>
     void LoadROM(byte[] rom, string path);
+
+    /// <summary>
+    /// Advances the emulation until a complete video frame is ready.
+    /// </summary>
+    void StepFrame();
 }

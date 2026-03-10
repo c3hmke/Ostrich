@@ -23,4 +23,15 @@ public interface IVideoSource
     /// Native height of the emulator framebuffer in pixels.
     /// </summary>
     int Height { get; }
+    
+    /// <summary>
+    /// ID for the current frame, used to identify if frame changed.
+    /// </summary>
+    ulong FrameId { get; }
+    
+    /// <summary>
+    /// Software framebuffer to hold RGBA pixels.
+    /// The structure means copying isn't needed and the FE can upload directly to GL.
+    /// </summary>
+    ReadOnlySpan<uint> GetFrameBuffer();
 }

@@ -5,25 +5,37 @@ namespace GameBoy;
 
 public class Emulator : IEmulator
 {
-    public IVideoSource Screen { get; } = new GBVideoSource();
+    private readonly GBVideoSource _screen = new();
+    private readonly GBInputSink   _input  = new();
     
-    private readonly GBInputSink _input = new();
-    
-    public IInputSink  Input      => _input;
-    public IInputState InputState => _input;
+    public IVideoSource Screen      => _screen;
+    public IInputSink   Input       => _input;
+    public IInputState  InputState  => _input;
     
     public byte[]? ROM     { get; private set; }
     public string? ROMPath { get; private set; }
 
-    /// <summary> Load a ROM into memory and reset the core. </summary>
+    /// <summary>
+    /// Load a ROM into memory and reset the core.
+    /// </summary>
     public void LoadROM(byte[] rom, string path)
     {
         if (rom == null || rom.Length < 0x150)
             throw new ArgumentException($"Invalid ROM size {rom?.Length ?? 0}");
         
         ROM = rom; ROMPath = path;
+        Reset();
+    }
+    public bool IsROMLoaded => ROM is not null;
+
+    /// <summary> Set the screen to black. </summary>
+    public void Reset() => _screen.Clear(0xFFFFFF);
+
+    public void StepFrame()
+    {
+        if (!IsROMLoaded) return;
         
-        // TODO: Parse header, create Cart(MBC), reset CPU/PPU/MMU state etc.
+        _screen.Clear(0xFFAAFFAA); // Placeholder until CPU/PPU exist.
     }
     
     /// <summary> Minimal button state store. </summary>
