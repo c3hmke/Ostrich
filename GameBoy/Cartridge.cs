@@ -69,8 +69,7 @@ public class Cartridge
     /// <summary>
     /// Does all the validation checks on a Cartridge and returns whether it passes. 
     /// </summary>
-    public bool IsValid() =>
-        HasValidHeaderChecksum() && HasValidROMSize();
+    public bool IsValid => HasValidHeaderChecksum() && HasValidROMSize();
 
     /// <summary>
     /// Validates the standard Game Boy header checksum over bytes 0x0134 through 0x014C.
