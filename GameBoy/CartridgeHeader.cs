@@ -1,7 +1,7 @@
-namespace GameBoy.Cartridge;
+namespace GameBoy;
 
 /// <summary> High-level cartridge hardware categories </summary>
-public enum Type
+public enum CartridgeType
 {
     Unknown = 0, ROMOnly, MBC1, MBC1RAM, MBC1RAMBattery
 }
@@ -16,7 +16,7 @@ public class CartridgeHeader
     public required string Title { get; init; }
     
     /// <summary> Raw cartridge type from address 0x0148. </summary>
-    public byte CartridgeType { get; init; }
+    public byte TypeCode { get; init; }
     
     /// <summary> Raw ROM size from address 0x0149. </summary>
     public byte ROMSizeCode { get; init; }
@@ -28,13 +28,13 @@ public class CartridgeHeader
     public byte HeaderChecksum { get; init; }
 
     /// <summary> Get the Cartridge Type as defined by the header byte. </summary>
-    public Type Type => CartridgeType switch
+    public CartridgeType CartridgeType => TypeCode switch
     {
-        0x00 => Type.ROMOnly,
-        0x01 => Type.MBC1,
-        0x02 => Type.MBC1RAM,
-        0x03 => Type.MBC1RAMBattery,
-        _    => Type.Unknown
+        0x00 => CartridgeType.ROMOnly,
+        0x01 => CartridgeType.MBC1,
+        0x02 => CartridgeType.MBC1RAM,
+        0x03 => CartridgeType.MBC1RAMBattery,
+        _    => CartridgeType.Unknown
     };
     
     /// <summary> Get the ROM size as defined by the header byte. </summary>

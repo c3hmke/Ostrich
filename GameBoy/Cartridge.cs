@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace GameBoy.Cartridge;
+namespace GameBoy;
 
 /// <summary>
 /// Represents a loaded Game Boy cartridge image and its parsed header data.
@@ -54,7 +54,7 @@ public class Cartridge
         return new CartridgeHeader
         {
             Title          = title,
-            CartridgeType  = romData[0x0147],
+            TypeCode  = romData[0x0147],
             ROMSizeCode    = romData[0x0148],
             RAMSizeCode    = romData[0x0149],
             HeaderChecksum = romData[0x014D]
