@@ -9,8 +9,8 @@ public class Cartridge
 {
     private const int MinROMSize = 0x150;
     
-    public CartridgeHeader Header { get; }
-    public byte[]          ROMData { get; }
+    public CartridgeHeader Header     { get; }
+    public byte[]          ROMData    { get; }
     public string          SourcePath { get; }
 
     /// <summary> Force the use of the factory method. </summary>
@@ -20,6 +20,11 @@ public class Cartridge
         ROMData    = romData;
         SourcePath = sourcePath;
     }
+    
+    /// <summary>
+    /// Read a byte from the ROM file.
+    /// </summary>
+    public byte ReadROM(int address) => ROMData[address];
     
     /// <summary>
     /// Construct a Cartridge using raw ROM data
@@ -37,7 +42,7 @@ public class Cartridge
     }
 
     /// <summary>
-    /// Reads the fixed header region and builds a CartridgeHeader
+    /// Reads the fixed header region and builds a CartridgeHeader.
     /// </summary>
     private static CartridgeHeader ParseHeader(byte[] romData)
     {
