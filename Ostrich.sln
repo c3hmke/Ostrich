@@ -1,16 +1,16 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "App", "App\App.csproj", "{1FE224BA-9688-4C9B-ACC5-D29E21A15DFA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "App", "src\App\App.csproj", "{1FE224BA-9688-4C9B-ACC5-D29E21A15DFA}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{7B809F32-8124-45DE-A49E-210AD68341B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Emulation", "Emulation\Emulation.csproj", "{E9C4F0CA-40C7-45E0-A6EB-6022F47F2049}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Emulation", "src\Emulation\Emulation.csproj", "{E9C4F0CA-40C7-45E0-A6EB-6022F47F2049}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameBoy", "GameBoy\GameBoy.csproj", "{7F6D88A5-CEB9-4D3C-99EF-3812D36AA104}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameBoy", "src\GameBoy\GameBoy.csproj", "{7F6D88A5-CEB9-4D3C-99EF-3812D36AA104}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{F17590CB-4413-4FDF-988F-A2621E9BB14C}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F17590CB-4413-4FDF-988F-A2621E9BB14C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ROMs", "ROMs\ROMs.csproj", "{AF4C0EA4-86C1-4730-9C18-611F7CF9CAC8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ROMs", "tests\ROMs\ROMs.csproj", "{AF4C0EA4-86C1-4730-9C18-611F7CF9CAC8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
