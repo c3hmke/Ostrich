@@ -1,0 +1,2 @@
+# Ignore all test ROMs
+tests/ROMs/** linguist-vendored
