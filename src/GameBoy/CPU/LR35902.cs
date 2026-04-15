@@ -4,33 +4,26 @@ namespace GameBoy.CPU;
 
 public sealed class LR35902State : ICPUState
 {
-    // Trackers
-    public ushort PC         { get; } = 0x0100; // entry point.
-    public ushort SP         { get; } = 0xFFFE; // starts at top of HRAM.
+    public ushort PC         { get; } = 0x0100; // Entry point (0x0000 for reset vector)
+    public ushort SP         { get; } = 0xFFFE; // Top of HRAM
     public ulong  CycleCount { get; } = 0;
     public bool   Halted     { get; } = false;
-    
-    // Registers
+
     public byte   A          { get; } = 0;
     public byte   B          { get; } = 0;
     public byte   C          { get; } = 0;
     public byte   D          { get; } = 0;
     public byte   E          { get; } = 0;
-    public byte   F          { get; } = 0xB0; // (bits 5,7 set)
+    public byte   F          { get; } = 0xB0;   // Convention (bits 5,7 set)
     public byte   H          { get; } = 0;
     public byte   L          { get; } = 0;
     
-    // Flags
-    public bool   FlagZ => (F & 0x80) != 0;
-    public bool   FlagN => (F & 0x40) != 0;
-    public bool   FlagH => (F & 0x20) != 0;
-    public bool   FlagC => (F & 0x10) != 0;
+    public bool FlagZ => (F & 0x80) != 0;
+    public bool FlagN => (F & 0x40) != 0;
+    public bool FlagH => (F & 0x20) != 0;
+    public bool FlagC => (F & 0x10) != 0;
 }
 
-/// <summary>
-/// The LR35902 is the CPU found in the DMG Game Boy. This class emulates
-/// the function of that specific CPU.
-/// </summary>
 public sealed class LR35902 : ICPU
 {
     private readonly LR35902State _state = new();
