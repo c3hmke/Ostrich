@@ -61,6 +61,14 @@ public class ImGuiUI
 
             if (ImGui.MenuItem("Controls.."))
                 ControlsWindowOpen = true;
+            
+            ImGui.Separator();
+
+            bool debugMode = windowCfg.DebugModeEnabled;
+            if (ImGui.Checkbox("Debug Mode", ref debugMode))
+            {
+                ConfigSaveRequested = true;
+            }
 
             ImGui.EndMenu(/* Emulator */);
         }

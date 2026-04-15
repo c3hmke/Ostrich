@@ -17,12 +17,13 @@ namespace App;
 internal class Program
 {
     /// Application window configurations
-    private static readonly WindowConfig  WindowCfg = new();
-    private static readonly ImGuiUI       UI        = new();
-    private static InputBindings          _bindings = null!;
-    private static AppConfig              _cfg      = null!;
-    private static KeyboardInput          _input    = null!;
-    private static IWindow                _window   = null!;
+    private static readonly WindowConfig  WindowCfg   = new();
+    private static readonly ImGuiUI       UI          = new();
+    private static readonly DebugWindow   DebugWindow = new();
+    private static InputBindings          _bindings   = null!;
+    private static AppConfig              _cfg        = null!;
+    private static KeyboardInput          _input      = null!;
+    private static IWindow                _window     = null!;
     
     private static int? _pendingScale; // New scale to be applied on change
     
@@ -134,6 +135,12 @@ internal class Program
         UI.DrawMainMenuBar(WindowCfg, _currentROMPath); // Draw the top menu bar in application
         UI.DrawControlsWindow(_bindings, _input);       // Draw rebind menu if active
         UI.DrawOpenRomModal(_cfg.ROMDirectory);         // Draw ROM load dialogue if active
+
+        if (WindowCfg.DebugModeEnabled)
+        {
+            DebugWindow.SetState(_emu.CPU?.State);
+            DebugWindow.Draw();
+        }
         
         if (UI.ReloadROMRequested)
         {
@@ -191,10 +198,12 @@ internal class Program
         ImGui.End();
         // --------- Input test code ----------------
             
-        /// Handle UI Intents
+        // Handle UI Intents
         if (UI.ExitRequested) _window.Close();
-        if (UI.PendingScale is int requestedScale) 
+        if (UI.PendingScale is int requestedScale)
+        {
             _pendingScale = requestedScale;
+        }
         if (UI.ToggleVSyncRequested)
         {
             WindowCfg.VSyncEnabled = !WindowCfg.VSyncEnabled;
@@ -248,13 +257,13 @@ internal class Program
         // Ensure required buttons exist (fallbacks)
         void Ensure(GameButton b, Key k) { if (!dict.ContainsKey(b)) dict[b] = k; }
 
-        Ensure(GameButton.Up, Key.Up);
-        Ensure(GameButton.Down, Key.Down);
-        Ensure(GameButton.Left, Key.Left);
-        Ensure(GameButton.Right, Key.Right);
-        Ensure(GameButton.A, Key.Z);
-        Ensure(GameButton.B, Key.X);
-        Ensure(GameButton.Start, Key.Enter);
+        Ensure(GameButton.Up,     Key.Up);
+        Ensure(GameButton.Down,   Key.Down);
+        Ensure(GameButton.Left,   Key.Left);
+        Ensure(GameButton.Right,  Key.Right);
+        Ensure(GameButton.A,      Key.Z);
+        Ensure(GameButton.B,      Key.X);
+        Ensure(GameButton.Start,  Key.Enter);
         Ensure(GameButton.Select, Key.Backspace);
 
         return dict;

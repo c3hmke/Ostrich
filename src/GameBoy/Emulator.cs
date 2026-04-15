@@ -1,4 +1,5 @@
 using Emulation;
+using GameBoy.CPU;
 using GameBoy.Video;
 
 namespace GameBoy;
@@ -7,15 +8,17 @@ public class Emulator : IEmulator
 {
     private readonly GBVideoSource _screen = new();
     private readonly GBInputSink   _input  = new();
+    private readonly LR35902       _cpu = new();
 
-    public Cartridge?   LoadedCartridge { get; private set; }
+    public  Cartridge?  LoadedCartridge { get; private set; }
     private Bus?        _bus;
     
     public IVideoSource Screen      => _screen;
     public IInputSink   Input       => _input;
     public IInputState  InputState  => _input;
-    
-    
+    public ICPU         CPU         => _cpu;
+
+
     /// <summary> Indicates if a cartridge is successfully loaded. </summary>
     public bool IsROMLoaded => LoadedCartridge is not null;
 

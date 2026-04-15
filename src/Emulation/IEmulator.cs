@@ -18,6 +18,7 @@ public interface IEmulator
     IVideoSource Screen      { get; }   // Interact with the screen.
     IInputSink   Input       { get; }   // Used to capture all user input.
     IInputState  InputState  { get; }   // Current state of user input.
+    ICPU?        CPU         { get; }   // CPU running the emulation.
     
     bool         IsROMLoaded { get; }   // Lifecycle hook for FE.
 

@@ -26,6 +26,12 @@ public class WindowConfig
     /// as soon as they are available with reduces input latency but can cause screen tearing.
     /// </summary>
     public bool VSyncEnabled     { get; set; } = true;
+    
+    /// <summary>
+    /// Whether Debug mode is enabled. When enabling the Debug mode some more windows are drawn
+    /// to aid in debugging what is being worked on.
+    /// </summary>
+    public bool DebugModeEnabled { get; set; } = true;
 
     /// <summary>
     /// Integer scaling factor for the content area
