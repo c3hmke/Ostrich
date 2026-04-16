@@ -14,7 +14,7 @@ using Silk.NET.Windowing;
 
 namespace App;
 
-internal class Program
+internal static class Program
 {
     /// Application window configurations
     private static readonly WindowConfig  WindowCfg   = new();
