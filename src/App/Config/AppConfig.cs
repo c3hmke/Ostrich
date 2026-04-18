@@ -15,8 +15,9 @@ public class AppConfig
 
 public sealed class WindowConfigDTO
 {
-    public int  Scale        { get; set; } = 3;
-    public bool VSyncEnabled { get; set; } = true;
+    public int  Scale            { get; set; } = 3;
+    public bool VSyncEnabled     { get; set; } = true;
+    public bool DebugModeEnabled { get; set; } = true;
 }
 
 public sealed class InputBindingsDTO

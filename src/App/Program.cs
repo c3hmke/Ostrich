@@ -41,8 +41,9 @@ internal static class Program
         // Load app configurations
         _cfg = ConfigStore.Load();
 
-        WindowCfg.Scale        = _cfg.Window.Scale;
-        WindowCfg.VSyncEnabled = _cfg.Window.VSyncEnabled;
+        WindowCfg.Scale            = _cfg.Window.Scale;
+        WindowCfg.VSyncEnabled     = _cfg.Window.VSyncEnabled;
+        WindowCfg.DebugModeEnabled = _cfg.Window.DebugModeEnabled;
 
         _bindings = new InputBindings(LoadBindings(_cfg));
         
@@ -221,8 +222,9 @@ internal static class Program
     
     private static void SaveAppConfig()
     {
-        _cfg.Window.Scale = WindowCfg.Scale;
-        _cfg.Window.VSyncEnabled = WindowCfg.VSyncEnabled;
+        _cfg.Window.Scale            = WindowCfg.Scale;
+        _cfg.Window.VSyncEnabled     = WindowCfg.VSyncEnabled;
+        _cfg.Window.DebugModeEnabled = WindowCfg.DebugModeEnabled;
 
         _cfg.Input.ButtonToKey = _bindings.All.ToDictionary(kv => kv.Key, kv => kv.Value.ToString());
 

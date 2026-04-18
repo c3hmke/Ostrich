@@ -67,6 +67,7 @@ public class ImGuiUI
             bool debugMode = windowCfg.DebugModeEnabled;
             if (ImGui.Checkbox("Debug Mode", ref debugMode))
             {
+                windowCfg.DebugModeEnabled = debugMode;
                 ConfigSaveRequested = true;
             }
 
