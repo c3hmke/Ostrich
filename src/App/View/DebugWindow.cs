@@ -6,23 +6,62 @@ namespace App.View;
 
 public class DebugWindow
 {
-    private ICPUState? _state;
+    private ICPUState?   _state;
+    private IInputState? _inputState;
 
     public void SetState(ICPUState? state) => _state = state;
+    public void SetInputState(IInputState? inputState) => _inputState = inputState;
     
     public void Draw(Vector2D<int> framebufferSize, WindowConfig cfg)
     {
-        if (_state is null)
-            return;
-
         int x = framebufferSize.X - cfg.PaddingPx - cfg.DebugPaneWidthPx;
-        int y = cfg.MenuBarReservePx + cfg.PaddingPx;
-        int h = framebufferSize.Y - cfg.MenuBarReservePx - (cfg.PaddingPx * 2);
+        int topY = cfg.MenuBarReservePx + cfg.PaddingPx;
+        int totalH = framebufferSize.Y - cfg.MenuBarReservePx - (cfg.PaddingPx * 2);
 
-        ImGui.SetNextWindowPos(new System.Numerics.Vector2(x, y), ImGuiCond.Always);
-        ImGui.SetNextWindowSize(new System.Numerics.Vector2(cfg.DebugPaneWidthPx, h), ImGuiCond.Always);
+        const int inputPaneHeight = 64;
+        const int verticalPaneGap = 8;
 
-        ImGui.Begin("CPU State", ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize);
+        int inputH = Math.Min(inputPaneHeight, Math.Max(56, totalH));
+        int cpuY = topY + inputH + verticalPaneGap;
+        int cpuH = Math.Max(56, totalH - inputH - verticalPaneGap);
+
+        ImGui.SetNextWindowPos(new System.Numerics.Vector2(x, topY), ImGuiCond.Always);
+        ImGui.SetNextWindowSize(new System.Numerics.Vector2(cfg.DebugPaneWidthPx, inputH), ImGuiCond.Always);
+
+        ImGui.Begin("Input", ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse);
+
+        ImGui.Text("Pressed:");
+
+        bool any = false;
+        foreach (GameButton button in Enum.GetValues<GameButton>())
+        {
+            if (!(_inputState?.IsPressed(button) ?? false))
+                continue;
+
+            ImGui.SameLine();
+            ImGui.TextUnformatted(button.ToString());
+            any = true;
+        }
+
+        if (!any)
+        {
+            ImGui.SameLine();
+            ImGui.TextUnformatted("(none)");
+        }
+
+        ImGui.End();
+
+        ImGui.SetNextWindowPos(new System.Numerics.Vector2(x, cpuY), ImGuiCond.Always);
+        ImGui.SetNextWindowSize(new System.Numerics.Vector2(cfg.DebugPaneWidthPx, cpuH), ImGuiCond.Always);
+
+        ImGui.Begin("CPU State", ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse);
+
+        if (_state is null)
+        {
+            ImGui.TextUnformatted("CPU unavailable.");
+            ImGui.End();
+            return;
+        }
 
         ImGui.Text($"PC: 0x{_state.PC:X4}");
         ImGui.Text($"SP: 0x{_state.SP:X4}");

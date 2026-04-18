@@ -151,6 +151,7 @@ internal static class Program
         if (WindowCfg.DebugModeEnabled)
         {
             DebugWindow.SetState(_emu.CPU?.State);
+            DebugWindow.SetInputState(_emu.InputState);
             DebugWindow.Draw(fb, WindowCfg);
         }
         
@@ -184,32 +185,6 @@ internal static class Program
             catch (Exception e) { Console.Error.WriteLine(e.Message); }
         }
         
-        // --------- Input test code ----------------
-        ImGui.SetNextWindowBgAlpha(0.35f);
-        ImGui.Begin("Input", ImGuiWindowFlags.NoResize | ImGuiWindowFlags.AlwaysAutoResize);
-
-        ImGui.Text("Pressed:");
-
-        bool any = false;
-        foreach (GameButton b in Enum.GetValues<GameButton>())
-        {
-            if (_emu.InputState.IsPressed(b))
-            {
-                ImGui.SameLine();
-                ImGui.TextUnformatted(b.ToString());
-                any = true;
-            }
-        }
-
-        if (!any)
-        {
-            ImGui.SameLine();
-            ImGui.TextUnformatted("(none)");
-        }
-
-        ImGui.End();
-        // --------- Input test code ----------------
-            
         // Handle UI Intents
         if (UI.ExitRequested) _window.Close();
         if (UI.PendingScale is int requestedScale)
