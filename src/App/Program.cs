@@ -25,7 +25,8 @@ internal static class Program
     private static KeyboardInput          _input      = null!;
     private static IWindow                _window     = null!;
     
-    private static int? _pendingScale; // New scale to be applied on change
+    private static int? _pendingScale;      // New scale to be applied on change.
+    private static bool _pendingWindowCfg;  // Window config changes to be applied.
     
     /// Graphics configurations
     private static GL              _gl        = null!;
@@ -94,16 +95,26 @@ internal static class Program
     private static void OnUpdate(double delta)
     {
         // Defer window resizes to avoid native re-entrancy / segfaults
+        bool windowCfgChangePending = false;
+
         if (_pendingScale.HasValue && _pendingScale != WindowCfg.Scale)
         {
             WindowCfg.Scale = _pendingScale.Value;
             _pendingScale = null;
-                
-            ApplyWindowCfg();
-            
-            if (UI.ConfigSaveRequested) SaveAppConfig();
-            // TODO: Apply deferred vsync toggle here too (keeps render side clean).
+            windowCfgChangePending = true;
         }
+
+        if (_pendingWindowCfg)
+        {
+            _pendingWindowCfg = false;
+            windowCfgChangePending = true;
+        }
+
+        if (windowCfgChangePending)
+            ApplyWindowCfg();
+
+        if (UI.ConfigSaveRequested)
+            SaveAppConfig();
     }
 
     private static void OnRender(double delta)
@@ -140,7 +151,7 @@ internal static class Program
         if (WindowCfg.DebugModeEnabled)
         {
             DebugWindow.SetState(_emu.CPU?.State);
-            DebugWindow.Draw();
+            DebugWindow.Draw(fb, WindowCfg);
         }
         
         if (UI.ReloadROMRequested)
@@ -209,6 +220,11 @@ internal static class Program
         {
             WindowCfg.VSyncEnabled = !WindowCfg.VSyncEnabled;
             _window.VSync = WindowCfg.VSyncEnabled;
+            SaveAppConfig();
+        }
+        if (UI.ToggleDebugModeRequested)
+        {
+            _pendingWindowCfg = true;
         }
 
         _imGui.Render();

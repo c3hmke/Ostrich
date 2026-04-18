@@ -33,6 +33,9 @@ public class WindowConfig
     /// </summary>
     public bool DebugModeEnabled { get; set; } = true;
 
+    public int DebugPaneWidthPx  { get; set; } = 320;
+    public int DebugPaneGapPx    { get; set; } = 8;
+
     /// <summary>
     /// Integer scaling factor for the content area
     /// </summary>
@@ -52,7 +55,7 @@ public class WindowConfig
     /// Size of the full window, including the menu reserve and padding around the content area.
     /// </summary>
     public Vector2D<int> GetWindowSize(IVideoSource screen) => new (
-        (screen.Width * Scale) + (PaddingPx * 2),
+        (screen.Width * Scale) + (PaddingPx * 2) + (DebugModeEnabled ? DebugPaneWidthPx + DebugPaneGapPx : 0),
         (screen.Height * Scale) + (PaddingPx * 2) + MenuBarReservePx);
 
     /// <summary>
@@ -61,6 +64,6 @@ public class WindowConfig
     public (int x, int y, uint w, uint h) GetContentArea(Vector2D<int> framebufferSize) => (
         x: PaddingPx,
         y: PaddingPx, 
-        w: (uint) Math.Max(0, framebufferSize.X - (PaddingPx * 2)), 
+        w: (uint) Math.Max(0, framebufferSize.X - (PaddingPx * 2) - (DebugModeEnabled ? DebugPaneWidthPx + DebugPaneGapPx : 0)), 
         h: (uint) Math.Max(0, framebufferSize.Y - (PaddingPx * 2) - MenuBarReservePx));
 }

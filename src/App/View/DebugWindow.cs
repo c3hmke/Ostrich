@@ -1,5 +1,6 @@
 using Emulation;
 using ImGuiNET;
+using Silk.NET.Maths;
 
 namespace App.View;
 
@@ -9,12 +10,19 @@ public class DebugWindow
 
     public void SetState(ICPUState? state) => _state = state;
     
-    public void Draw()
+    public void Draw(Vector2D<int> framebufferSize, WindowConfig cfg)
     {
         if (_state is null)
             return;
 
-        ImGui.Begin("CPU Debug", ImGuiWindowFlags.AlwaysAutoResize);
+        int x = framebufferSize.X - cfg.PaddingPx - cfg.DebugPaneWidthPx;
+        int y = cfg.MenuBarReservePx + cfg.PaddingPx;
+        int h = framebufferSize.Y - cfg.MenuBarReservePx - (cfg.PaddingPx * 2);
+
+        ImGui.SetNextWindowPos(new System.Numerics.Vector2(x, y), ImGuiCond.Always);
+        ImGui.SetNextWindowSize(new System.Numerics.Vector2(cfg.DebugPaneWidthPx, h), ImGuiCond.Always);
+
+        ImGui.Begin("CPU State", ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize);
 
         ImGui.Text($"PC: 0x{_state.PC:X4}");
         ImGui.Text($"SP: 0x{_state.SP:X4}");

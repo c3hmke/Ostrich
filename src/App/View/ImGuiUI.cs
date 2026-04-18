@@ -68,6 +68,7 @@ public class ImGuiUI
             if (ImGui.Checkbox("Debug Mode", ref debugMode))
             {
                 windowCfg.DebugModeEnabled = debugMode;
+                ToggleDebugModeRequested = true;
                 ConfigSaveRequested = true;
             }
 
@@ -193,6 +194,7 @@ public class ImGuiUI
     
     // Window controls
     public bool ToggleVSyncRequested { get; private set; }
+    public bool ToggleDebugModeRequested { get; private set; }
     public int? PendingScale         { get; private set; }
     
     /// <summary> Function to clear all requests so the menu stops blocking. </summary>
@@ -204,6 +206,7 @@ public class ImGuiUI
         OpenROMRequested = false;
         ReloadROMRequested = false;
         ToggleVSyncRequested = false;
+        ToggleDebugModeRequested = false;
         ConfigSaveRequested = false;
         ExitRequested = false;
     }
