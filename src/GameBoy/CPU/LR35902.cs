@@ -11,9 +11,9 @@ public sealed class LR35902State : ICPUState
     //--------------------------------------------------------------------------------------------------//
     //                                           COUNTERS                                               //
     //--------------------------------------------------------------------------------------------------//
-    public ushort PC         { get; internal set; } = 0x0100; // Program Counter; Entry point
-    public ushort SP         { get; internal set; } = 0xFFFE; // Stack Pointer;   Top of HRAM
-    public ulong  CycleCount { get; internal set; } = 0;
+    public ushort PC         { get; internal set; } = 0x0100;   // Program Counter; Entry point
+    public ushort SP         { get; internal set; } = 0xFFFE;   // Stack Pointer;   Top of HRAM
+    public ulong  CycleCount { get; internal set; } = 0;        // Clock cycles (T-Cycles)
     public bool   Halted     { get; internal set; } = false;
 
     //--------------------------------------------------------------------------------------------------//
@@ -88,10 +88,10 @@ public sealed class LR35902State : ICPUState
     //--------------------------------------------------------------------------------------------------//
     //                                          OPERATIONS                                              //
     //--------------------------------------------------------------------------------------------------//
-    public void IncrementPC() => PC++;
-    public void IncrementSP() => SP++;
-    public void DecrementSP() => SP--;
-    public void AddCycles(uint cycles) => CycleCount += cycles;
+    public void AddClockCycles(uint cycles)
+    {
+        CycleCount += cycles;
+    }
     
     public void SetFlags(bool z, bool n, bool h, bool c)
     {
@@ -136,7 +136,35 @@ public sealed class LR35902State : ICPUState
 /// </summary>
 public sealed class LR35902 : ICPU
 {
+    // 1 DMG Machine Cycle equates to 4 clock cycles (or T-cycles) on the CPU.
+    private const int MachineCycle = 4;
+    
     private readonly LR35902State _state = new();
+    private          Bus?         _bus;
     
     public ICPUState State => _state;
+    public void AttachBus(Bus bus) => _bus = bus;
+
+    /// <summary>
+    /// Step the next instruction and executes the opcode found at that instruction.
+    /// </summary>
+    public void StepInstruction()
+    {
+        if (_bus is null || _state.Halted)
+            return;
+
+        // Read the Next opcode from the BUS (loaded from the cart)
+        byte opcode = _bus.ReadByte(_state.PC);
+        
+        // Step the Program Counter then execute the opcode
+        _state.PC++; 
+        _state.AddClockCycles(MachineCycle); // this is currently added as NOP uses 4 cycles.
+
+        switch (opcode)
+        {
+            case 0x00: return;  // NOP
+            
+            default: throw new NotSupportedException($"Opcode {opcode} not supported");
+        }
+    }
 }
