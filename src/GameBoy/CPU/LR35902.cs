@@ -193,9 +193,7 @@ public sealed class LR35902 : ICPU
 
             case 0xC3:          // JP a16          
             {
-                (byte lo, byte hi) = LoHi();
-                
-                _state.PC = (ushort)((hi << 8) | lo);
+                _state.PC = ReadNextWord();
                 
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
@@ -203,9 +201,7 @@ public sealed class LR35902 : ICPU
 
             case 0x31:          // LD SP,d16
             {
-                (byte lo, byte hi) = LoHi();
-                
-                _state.SP = (ushort)((hi << 8) | lo);
+                _state.SP = ReadNextWord();
                 
                 _state.AddClockCycles(MachineCycle * 2); // total 12
                 return;
@@ -213,10 +209,7 @@ public sealed class LR35902 : ICPU
             
             case 0xEA:          // LD (a16),A
             {
-                (byte lo, byte hi) = LoHi();
-
-                ushort addr = (ushort)((hi << 8) | lo);
-                _bus.WriteByte(addr, _state.A);
+                _bus.WriteByte(ReadNextWord(), _state.A);
 
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
@@ -224,10 +217,7 @@ public sealed class LR35902 : ICPU
 
             case 0xFA:          // LD (a16),A
             {
-                (byte lo, byte hi) = LoHi();
-
-                ushort addr = (ushort)((hi << 8) | lo);
-                _state.A = _bus.ReadByte(addr);
+                _state.A = _bus.ReadByte(ReadNextWord());
 
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
@@ -235,9 +225,7 @@ public sealed class LR35902 : ICPU
 
             case 0xCD:          // CALL a16
             {
-                (byte lo, byte hi) = LoHi();
-                
-                ushort target = (ushort)((hi << 8) | lo);
+                ushort target = ReadNextWord();
                 
                 // push return address onto stack (current PC in little-endian)
                 ushort ret = _state.PC;
@@ -265,16 +253,14 @@ public sealed class LR35902 : ICPU
         }
     }
 
-    /// <summary> Retrieve the Lo and Hi bytes while incrementing the PC. </summary>
-    private (byte lo, byte hi) LoHi()
+    /// <summary> Reads the next word from the instruction stream; advances the PC. </summary>
+    private ushort ReadNextWord()
     {
-        if (_bus is null) return (0, 0);
+        if (_bus is null) return 0;
         
-        byte lo = _bus.ReadByte(_state.PC);
-        _state.PC++;
-        byte hi = _bus.ReadByte(_state.PC);
-        _state.PC++;
+        byte lo = _bus.ReadByte(_state.PC); _state.PC++;
+        byte hi = _bus.ReadByte(_state.PC); _state.PC++;
         
-        return (lo, hi);
+        return (ushort)((hi << 8) | lo);
     }
 }
