@@ -227,11 +227,7 @@ public sealed class LR35902 : ICPU
             {
                 ushort target = ReadNextWord();
                 
-                // push return address onto stack (current PC in little-endian)
-                ushort ret = _state.PC;
-                _state.SP--; _bus.WriteByte(_state.SP, (byte)(ret >> 8));
-                _state.SP--; _bus.WriteByte(_state.SP, (byte)(ret & 0xFF));
-                
+                PushWord(_state.PC);
                 _state.PC = target;
                 
                 _state.AddClockCycles(MachineCycle * 5); // total 24
@@ -240,10 +236,7 @@ public sealed class LR35902 : ICPU
 
             case 0xC9:          // RET
             {
-                byte lo = _bus.ReadByte(_state.SP); _state.SP++;
-                byte hi = _bus.ReadByte(_state.SP); _state.SP++;
-
-                _state.PC = (ushort)((hi << 8) | lo);
+                _state.PC = PopWord();
                 
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
@@ -260,6 +253,26 @@ public sealed class LR35902 : ICPU
         
         byte lo = _bus.ReadByte(_state.PC); _state.PC++;
         byte hi = _bus.ReadByte(_state.PC); _state.PC++;
+        
+        return (ushort)((hi << 8) | lo);
+    }
+
+    /// <summary> Push a word onto the stack. </summary>
+    private void PushWord(ushort value)
+    {
+        if (_bus is null) return;
+
+        _state.SP--; _bus.WriteByte(_state.SP, (byte)(value >> 8));   // high byte
+        _state.SP--; _bus.WriteByte(_state.SP, (byte)(value & 0xFF)); // low byte
+    }
+
+    /// <summary> Pop a word from the stack. </summary>
+    private ushort PopWord()
+    {
+        if (_bus is null) return 0;
+        
+        byte lo = _bus.ReadByte(_state.SP); _state.SP++;
+        byte hi = _bus.ReadByte(_state.SP); _state.SP++;
         
         return (ushort)((hi << 8) | lo);
     }
