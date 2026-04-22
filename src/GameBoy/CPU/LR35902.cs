@@ -205,19 +205,30 @@ public sealed class LR35902 : ICPU
             {
                 (byte lo, byte hi) = LoHi();
                 
-                _state.PC = (ushort)((hi << 8) | lo);
+                _state.SP = (ushort)((hi << 8) | lo);
                 
                 _state.AddClockCycles(MachineCycle * 2); // total 12
                 return;
             }
-
+            
             case 0xEA:          // LD (a16),A
             {
                 (byte lo, byte hi) = LoHi();
-                
+
                 ushort addr = (ushort)((hi << 8) | lo);
                 _bus.WriteByte(addr, _state.A);
-                
+
+                _state.AddClockCycles(MachineCycle * 3); // total 16
+                return;
+            }
+
+            case 0xFA:          // LD (a16),A
+            {
+                (byte lo, byte hi) = LoHi();
+
+                ushort addr = (ushort)((hi << 8) | lo);
+                _state.A = _bus.ReadByte(addr);
+
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
             }
@@ -241,7 +252,8 @@ public sealed class LR35902 : ICPU
 
             case 0xC9:          // RET
             {
-                (byte lo, byte hi) = LoHi();
+                byte lo = _bus.ReadByte(_state.SP); _state.SP++;
+                byte hi = _bus.ReadByte(_state.SP); _state.SP++;
 
                 _state.PC = (ushort)((hi << 8) | lo);
                 
