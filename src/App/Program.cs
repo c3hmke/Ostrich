@@ -148,6 +148,11 @@ internal static class Program
         UI.DrawControlsWindow(_bindings, _input);       // Draw rebind menu if active
         UI.DrawOpenRomModal(_cfg.ROMDirectory);         // Draw ROM load dialogue if active
 
+        // --- Step the CPU ---
+        if (_emu.IsROMLoaded)
+            _emu.StepFrame();
+        
+        // --- Handle UI Requests ---
         if (WindowCfg.DebugModeEnabled)
         {
             DebugWindow.SetState(_emu.CPU?.State);

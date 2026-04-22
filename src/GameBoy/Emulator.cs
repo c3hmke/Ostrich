@@ -23,9 +23,7 @@ public class Emulator : IEmulator
     public bool IsROMLoaded => LoadedCartridge is not null;
 
 
-    /// <summary>
-    /// Load a ROM into memory and reset the core.
-    /// </summary>
+    /// <summary> Load a ROM into memory and reset the core. </summary>
     public void LoadROM(byte[] rom, string path)
     {
         if (rom == null) 
@@ -66,6 +64,21 @@ public class Emulator : IEmulator
     {
         if (LoadedCartridge is null || _bus is null) 
             return;
+
+        const int instructionBudget = 64;
+        for (int i = 0; i < instructionBudget; i++)
+        {
+            try
+            {
+                _cpu.StepInstruction();
+            }
+            catch (NotSupportedException)
+            {
+                // Temporary bring-up behavior: stop stepping this frame
+                // once we hit an opcode we haven't implemented yet.
+                break;
+            }
+        }
         
         _screen.Clear(0xFFAAFFAA); // Placeholder until CPU/PPU exist.
     }
