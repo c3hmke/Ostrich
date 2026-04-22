@@ -145,9 +145,14 @@ public sealed class LR35902 : ICPU
     public ICPUState State => _state;
     public void AttachBus(Bus bus) => _bus = bus;
 
-    /// <summary>
-    /// Step the next instruction and executes the opcode found at that instruction.
-    /// </summary>
+    /// <summary> Reset logic for the CPU. </summary>
+    public void Reset()
+    {
+        _state.Reset();
+        _bus = null;
+    }
+
+    /// <summary> Step the next instruction and executes the opcode found at that instruction. </summary>
     public void StepInstruction()
     {
         if (_bus is null || _state.Halted)

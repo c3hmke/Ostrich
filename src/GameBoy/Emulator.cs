@@ -46,6 +46,8 @@ public class Emulator : IEmulator
     /// <summary> Set the screen to black. </summary>
     public void Reset()
     {
+        _cpu.Reset();
+        
         if (LoadedCartridge is null)
         {
             _bus = null;
@@ -55,6 +57,8 @@ public class Emulator : IEmulator
         }
         
         _bus = new Bus(LoadedCartridge);
+        _cpu.AttachBus(_bus);
+        
         _screen.Clear(0xFFFFFF); // Placeholder visual state until frame execution is wired to CPU/PPU.
     }
 
