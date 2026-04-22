@@ -49,6 +49,17 @@ public sealed class CpuStepInstructionTests
     }
 
     [Fact]
+    public void Jr_r8_AppliesNegativeSignedRelativeOffset()
+    {
+        var cpu = CreateCpuWithProgram(0x18, 0xFE);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0100, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount);
+    }
+
+    [Fact]
     public void Jp_a16_JumpsToAbsoluteAddress()
     {
         var cpu = CreateCpuWithProgram(0xC3, 0x34, 0x12);
