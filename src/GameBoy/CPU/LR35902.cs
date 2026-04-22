@@ -61,7 +61,7 @@ public sealed class LR35902State : ICPUState
         set
         {
             D = (byte)(value >> 8);
-            C = (byte)(value);
+            E = (byte)(value);
         }
     }
 
