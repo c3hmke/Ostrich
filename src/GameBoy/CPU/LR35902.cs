@@ -168,6 +168,41 @@ public sealed class LR35902 : ICPU
         switch (opcode)
         {
             case 0x00: return;  // NOP
+
+            case 0x3E:          // LD A,d8
+            {
+                byte value = _bus.ReadByte(_state.PC);
+                
+                _state.PC++;
+                _state.A = value;
+                _state.AddClockCycles(MachineCycle);
+                
+                return;
+            }
+
+            case 0x18:          // JR r8
+            {
+                sbyte offset = unchecked((sbyte)(_bus.ReadByte(_state.PC)));
+                
+                _state.PC++;
+                _state.PC = (ushort)(_state.PC + offset);
+                _state.AddClockCycles(MachineCycle * 2);
+
+                return;
+            }
+
+            case 0xC3:          // JP a16          
+            {
+                byte lo = _bus.ReadByte(_state.PC);
+                _state.PC++;
+                byte hi = _bus.ReadByte(_state.PC);
+                _state.PC++;
+                
+                _state.PC = (ushort)((hi << 8) | lo);
+                _state.AddClockCycles(MachineCycle * 3);
+
+                return;
+            }
             
             default: throw new NotSupportedException($"Opcode {opcode} not supported");
         }
