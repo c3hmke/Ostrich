@@ -163,7 +163,7 @@ public sealed class LR35902 : ICPU
         
         // Step the Program Counter then execute the opcode
         _state.PC++; 
-        _state.AddClockCycles(MachineCycle); // this is currently added as NOP uses 4 cycles.
+        _state.AddClockCycles(MachineCycle); // fetch uses a machine cycle.
 
         switch (opcode)
         {
@@ -175,8 +175,8 @@ public sealed class LR35902 : ICPU
                 
                 _state.PC++;
                 _state.A = value;
-                _state.AddClockCycles(MachineCycle);
                 
+                _state.AddClockCycles(MachineCycle); // total 8
                 return;
             }
 
@@ -186,25 +186,83 @@ public sealed class LR35902 : ICPU
                 
                 _state.PC++;
                 _state.PC = (ushort)(_state.PC + offset);
-                _state.AddClockCycles(MachineCycle * 2);
-
+                
+                _state.AddClockCycles(MachineCycle * 2); // total 12
                 return;
             }
 
             case 0xC3:          // JP a16          
             {
-                byte lo = _bus.ReadByte(_state.PC);
-                _state.PC++;
-                byte hi = _bus.ReadByte(_state.PC);
-                _state.PC++;
+                (byte lo, byte hi) = LoHi();
                 
                 _state.PC = (ushort)((hi << 8) | lo);
-                _state.AddClockCycles(MachineCycle * 3);
+                
+                _state.AddClockCycles(MachineCycle * 3); // total 16
+                return;
+            }
 
+            case 0x31:          // LD SP,d16
+            {
+                (byte lo, byte hi) = LoHi();
+                
+                _state.PC = (ushort)((hi << 8) | lo);
+                
+                _state.AddClockCycles(MachineCycle * 2); // total 12
+                return;
+            }
+
+            case 0xEA:          // LD (a16),A
+            {
+                (byte lo, byte hi) = LoHi();
+                
+                ushort addr = (ushort)((hi << 8) | lo);
+                _bus.WriteByte(addr, _state.A);
+                
+                _state.AddClockCycles(MachineCycle * 3); // total 16
+                return;
+            }
+
+            case 0xCD:          // CALL a16
+            {
+                (byte lo, byte hi) = LoHi();
+                
+                ushort target = (ushort)((hi << 8) | lo);
+                
+                // push return address onto stack (current PC in little-endian)
+                ushort ret = _state.PC;
+                _state.SP--; _bus.WriteByte(_state.SP, (byte)(ret >> 8));
+                _state.SP--; _bus.WriteByte(_state.SP, (byte)(ret & 0xFF));
+                
+                _state.PC = target;
+                
+                _state.AddClockCycles(MachineCycle * 5); // total 24
+                return;
+            }
+
+            case 0xC9:          // RET
+            {
+                (byte lo, byte hi) = LoHi();
+
+                _state.PC = (ushort)((hi << 8) | lo);
+                
+                _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
             }
             
             default: throw new NotSupportedException($"Opcode {opcode} not supported");
         }
+    }
+
+    /// <summary> Retrieve the Lo and Hi bytes while incrementing the PC. </summary>
+    private (byte lo, byte hi) LoHi()
+    {
+        if (_bus is null) return (0, 0);
+        
+        byte lo = _bus.ReadByte(_state.PC);
+        _state.PC++;
+        byte hi = _bus.ReadByte(_state.PC);
+        _state.PC++;
+        
+        return (lo, hi);
     }
 }
