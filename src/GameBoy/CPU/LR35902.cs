@@ -280,4 +280,31 @@ public sealed class LR35902 : ICPU
         
         return (ushort)((hi << 8) | lo);
     }
+
+    /// <summary> How HL should be adjusted after a memory access. </summary>
+    private enum HLStep { None, Increment, Decrement }
+
+    /// <summary> Read a byte from the address in HL, optionally adjusting HL after reading. </summary>
+    private byte ReadAtHL(HLStep step = HLStep.None)
+    {
+        if (_bus is null) return 0;
+
+        byte value = _bus.ReadByte(_state.HL);
+
+        if (step == HLStep.Increment) _state.HL++;
+        if (step == HLStep.Decrement) _state.HL--;
+        
+        return value;
+    }
+    
+    /// <summary> Write a byte to the address in HL, optionally adjusting HL after writing. </summary>
+    private void WriteAtHL(byte value, HLStep step = HLStep.None)
+    {
+        if (_bus is null) return;
+
+        _bus.WriteByte(_state.HL, value);
+
+        if (step == HLStep.Increment) _state.HL++;
+        if (step == HLStep.Decrement) _state.HL--;
+    }
 }
