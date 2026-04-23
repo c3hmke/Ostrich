@@ -241,4 +241,39 @@ public sealed class LR35902 : ICPU
         if (step == HLStep.Increment) _state.HL++;
         if (step == HLStep.Decrement) _state.HL--;
     }
+    
+    /// <summary> Read an 8-bit register by LR35902 register index (B,C,D,E,H,L,(HL),A). </summary>
+    private byte ReadReg8(int reg)
+    {
+        return reg switch
+        {
+            0 => _state.B,
+            1 => _state.C,
+            2 => _state.D,
+            3 => _state.E,
+            4 => _state.H,
+            5 => _state.L,
+            6 => ReadAtHL(),
+            7 => _state.A,
+            _ => throw new ArgumentOutOfRangeException(nameof(reg), reg, "register index must be 0..7")
+        };
+    }
+    
+    /// <summary> Write an 8-bit register by LR35902 register index (B,C,D,E,H,L,(HL),A). </summary>
+    private void WriteReg8(int reg, byte value)
+    {
+        switch (reg)
+        {
+            case 0: _state.B = value; break;
+            case 1: _state.C = value; break;
+            case 2: _state.D = value; break;
+            case 3: _state.E = value; break;
+            case 4: _state.H = value; break;
+            case 5: _state.L = value; break;
+            case 6: WriteAtHL(value); break;
+            case 7: _state.A = value; break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(reg), reg, "register index must be 0..7");
+        }
+    }
 }
