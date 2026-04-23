@@ -171,10 +171,7 @@ public sealed class LR35902 : ICPU
 
             case 0x3E:          // LD A,d8
             {
-                byte value = _bus.ReadByte(_state.PC);
-                
-                _state.PC++;
-                _state.A = value;
+                _state.A = ReadNextByte();
                 
                 _state.AddClockCycles(MachineCycle); // total 8
                 return;
@@ -182,9 +179,7 @@ public sealed class LR35902 : ICPU
 
             case 0x18:          // JR r8
             {
-                sbyte offset = unchecked((sbyte)(_bus.ReadByte(_state.PC)));
-                
-                _state.PC++;
+                sbyte offset = unchecked((sbyte)ReadNextByte());                
                 _state.PC = (ushort)(_state.PC + offset);
                 
                 _state.AddClockCycles(MachineCycle * 2); // total 12
@@ -245,14 +240,23 @@ public sealed class LR35902 : ICPU
             default: throw new NotSupportedException($"Opcode {opcode} not supported");
         }
     }
+    
+    /// <summary> Reads the next word from the instruction stream; advances the PC. </summary>
+    private byte ReadNextByte()
+    {
+        if (_bus is null) return 0;
+
+        byte value = _bus.ReadByte(_state.PC);
+        _state.PC++;
+
+        return value;
+    }
 
     /// <summary> Reads the next word from the instruction stream; advances the PC. </summary>
     private ushort ReadNextWord()
     {
-        if (_bus is null) return 0;
-        
-        byte lo = _bus.ReadByte(_state.PC); _state.PC++;
-        byte hi = _bus.ReadByte(_state.PC); _state.PC++;
+        byte lo = ReadNextByte();
+        byte hi = ReadNextByte();
         
         return (ushort)((hi << 8) | lo);
     }
