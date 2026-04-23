@@ -226,6 +226,22 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
+            case 0x77:          // LD (HL),A
+            {
+                WriteAtHL(_state.A);
+
+                _state.AddClockCycles(MachineCycle); // total 8
+                return;
+            }
+            
+            case 0x7E:          // LD A,(HL)
+            {
+                _state.A = ReadAtHL();
+                
+                _state.AddClockCycles(MachineCycle); // total 8
+                return;
+            }
+            
             case 0xC3:          // JP a16          
             {
                 _state.PC = ReadNextWord();
