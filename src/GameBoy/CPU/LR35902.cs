@@ -69,6 +69,25 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
+            case 0x20:          // JR NZ,e8
+            case 0x28:          // JR Z,e8
+            case 0x30:          // JR NC,e8
+            case 0x38:          // JR C,e8
+            {
+                sbyte offset = unchecked((sbyte)ReadNextByte());
+                ConditionCode cond = (ConditionCode)((opcode >> 3) & 0x03);
+
+                if (CheckCond(cond))
+                {
+                    _state.PC = (ushort)(_state.PC + offset);
+                    _state.AddClockCycles(MachineCycle * 2); // taken: +8 (total 12)
+                }
+                else
+                    _state.AddClockCycles(MachineCycle);     // not taken: +4 (total 8)
+
+                return;
+            }
+            
             case 0x22:          // LD (HL+),A
             {
                 WriteAtHL(_state.A, HLStep.Increment);
