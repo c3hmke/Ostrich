@@ -276,4 +276,44 @@ public sealed class LR35902 : ICPU
                 throw new ArgumentOutOfRangeException(nameof(reg), reg, "register index must be 0..7");
         }
     }
+    
+    /// <summary> Set CPU flags in Z/N/H/C order. </summary>
+    private void SetFlagsZNHC(bool z, bool n, bool h, bool c)
+    {
+        _state.SetFlags(z, n, h, c);
+    }
+    
+    /// <summary>
+    /// Adds signed 8-bit immediate to SP and updates flags per LR35902 rules.
+    /// Used by: ADD SP,e8 and LD HL,SP+e8.
+    /// </summary>
+    private ushort AddSignedToSP(byte e8)
+    {
+        ushort sp = _state.SP;
+        int    signed = unchecked((sbyte)e8);
+        ushort result = (ushort)(sp + signed);
+
+        // GB rule: Z=0, N=0, H/C from low-byte addition using unsigned e8.
+        bool h = ((sp & 0x0F) + (e8 & 0x0F)) > 0x0F;
+        bool c = ((sp & 0xFF) + e8) > 0xFF;
+
+        SetFlagsZNHC(z: false, n: false, h: h, c: c);
+        return result;
+    }
+    
+    /// <summary> Makes condition code usage clearer than raw ints </summary>
+    private enum ConditionCode { NZ = 0, Z  = 1, NC = 2, C  = 3 }
+    
+    /// <summary> Evaluate NZ/Z/NC/C condition code used by JR/JP/CALL/RET conditional forms. </summary>
+    private bool CheckCond(ConditionCode cond)
+    {
+        return cond switch
+        {
+            ConditionCode.NZ => !_state.FlagZ,
+            ConditionCode.Z  =>  _state.FlagZ,
+            ConditionCode.NC => !_state.FlagC,
+            ConditionCode.C  =>  _state.FlagC,
+            _ => throw new ArgumentOutOfRangeException(nameof(cond), cond, null)
+        };
+    }
 }
