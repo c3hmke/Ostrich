@@ -185,12 +185,20 @@ public sealed class LR35902 : ICPU
                 _state.AddClockCycles(MachineCycle * 2); // total 12
                 return;
             }
-
-            case 0xC3:          // JP a16          
+            
+            case 0x22:          // LD (HL+),A
             {
-                _state.PC = ReadNextWord();
+                WriteAtHL(_state.A, HLStep.Increment);
                 
-                _state.AddClockCycles(MachineCycle * 3); // total 16
+                _state.AddClockCycles(MachineCycle); // total 8
+                return;
+            }
+            
+            case 0x2A:          // LD A,(HL+)
+            {
+                _state.A = ReadAtHL(HLStep.Increment);
+                
+                _state.AddClockCycles(MachineCycle); // total 8
                 return;
             }
 
@@ -202,18 +210,26 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
-            case 0xEA:          // LD (a16),A
+            case 0x32:          // LD (HL-),A
             {
-                _bus.WriteByte(ReadNextWord(), _state.A);
+                WriteAtHL(_state.A, HLStep.Decrement);
 
-                _state.AddClockCycles(MachineCycle * 3); // total 16
+                _state.AddClockCycles(MachineCycle); // total 8
                 return;
             }
-
-            case 0xFA:          // LD (a16),A
+            
+            case 0x3A:          // LD A,(HL-)
             {
-                _state.A = _bus.ReadByte(ReadNextWord());
-
+                _state.A = ReadAtHL(HLStep.Decrement);
+                
+                _state.AddClockCycles(MachineCycle); // total 8
+                return;
+            }
+            
+            case 0xC3:          // JP a16          
+            {
+                _state.PC = ReadNextWord();
+                
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
             }
@@ -233,6 +249,22 @@ public sealed class LR35902 : ICPU
             {
                 _state.PC = PopWord();
                 
+                _state.AddClockCycles(MachineCycle * 3); // total 16
+                return;
+            }
+            
+            case 0xEA:          // LD (a16),A
+            {
+                _bus.WriteByte(ReadNextWord(), _state.A);
+
+                _state.AddClockCycles(MachineCycle * 3); // total 16
+                return;
+            }
+
+            case 0xFA:          // LD (a16),A
+            {
+                _state.A = _bus.ReadByte(ReadNextWord());
+
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
             }
