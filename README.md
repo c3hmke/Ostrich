@@ -44,10 +44,9 @@ GameBoy (Core), implements the contracts and holds knowledge of the emulated har
 Ostrich.App       ──▶  Ostrich.Emulation
 Ostrich.GameBoy   ──▶  Ostrich.Emulation
 
-#### LR 35902 Opcodes
+## LR 35902 Opcodes
 
-## LR35902 Base Opcodes (Grouped)
-
+### Base Opcodes (Grouped)
 | Opcode                             | Type    | Pseudo C                    | Description                            |
 |------------------------------------|---------|-----------------------------|----------------------------------------|
 | `00`                               | misc    | `;`                         | NOP                                    |
@@ -108,7 +107,7 @@ Ostrich.GameBoy   ──▶  Ostrich.Emulation
 
 \* includes `(HL)` forms (`34`,`35`)
 
-## LR35902 CB-Prefixed Opcodes (Grouped)
+### CB-Prefixed Opcodes (Grouped)
 | Opcode Range                       | Type    | Pseudo C                    | Description                            |
 |------------------------------------|---------|-----------------------------|----------------------------------------|
 | `CB 00..07`                        | rot     | `RLC r`                     | Rotate left circular                   |
