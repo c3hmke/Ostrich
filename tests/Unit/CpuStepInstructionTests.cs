@@ -60,6 +60,50 @@ public sealed class CpuStepInstructionTests
     }
 
     [Fact]
+    public void JrNz_e8_DoesNotJumpWhenZIsSet()
+    {
+        var cpu = CreateCpuWithProgram(0x20, 0x02);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)8, cpu.State.CycleCount);
+    }
+
+    [Fact]
+    public void JrZ_e8_JumpsWhenZIsSet()
+    {
+        var cpu = CreateCpuWithProgram(0x28, 0x02);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount);
+    }
+
+    [Fact]
+    public void JrNc_e8_DoesNotJumpWhenCIsSet()
+    {
+        var cpu = CreateCpuWithProgram(0x30, 0x02);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)8, cpu.State.CycleCount);
+    }
+
+    [Fact]
+    public void JrC_e8_JumpsWhenCIsSet()
+    {
+        var cpu = CreateCpuWithProgram(0x38, 0x02);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount);
+    }
+
+    [Fact]
     public void Jp_a16_JumpsToAbsoluteAddress()
     {
         var cpu = CreateCpuWithProgram(0xC3, 0x34, 0x12);
@@ -138,6 +182,137 @@ public sealed class CpuStepInstructionTests
         Assert.Equal((ushort)0x0103, cpu.State.PC);
         Assert.Equal((ushort)0xFFFE, cpu.State.SP);
         Assert.Equal((ulong)40, cpu.State.CycleCount);
+    }
+
+    [Fact]
+    public void LdHlInc_A_WritesAtHlThenIncrementsHl()
+    {
+        var (cpu, bus) = CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x3E, 0x5A, 0x22);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x5A, bus.ReadByte(0xC000));
+        Assert.Equal((ushort)0xC001, (ushort)((cpu.State.H << 8) | cpu.State.L));
+        Assert.Equal((ushort)0x0108, cpu.State.PC);
+        Assert.Equal((ulong)40, cpu.State.CycleCount);
+    }
+
+    [Fact]
+    public void LdA_HlInc_ReadsAtHlThenIncrementsHl()
+    {
+        var (cpu, bus) = CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x2A);
+        bus.WriteByte(0xC000, 0xA5);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xA5, cpu.State.A);
+        Assert.Equal((ushort)0xC001, (ushort)((cpu.State.H << 8) | cpu.State.L));
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount);
+    }
+
+    [Fact]
+    public void LdHlDec_A_WritesAtHlThenDecrementsHl()
+    {
+        var (cpu, bus) = CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x3E, 0x9B, 0x32);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x9B, bus.ReadByte(0xC000));
+        Assert.Equal((ushort)0xBFFF, (ushort)((cpu.State.H << 8) | cpu.State.L));
+        Assert.Equal((ushort)0x0108, cpu.State.PC);
+        Assert.Equal((ulong)40, cpu.State.CycleCount);
+    }
+
+    [Fact]
+    public void LdA_HlDec_ReadsAtHlThenDecrementsHl()
+    {
+        var (cpu, bus) = CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x3A);
+        bus.WriteByte(0xC000, 0x33);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x33, cpu.State.A);
+        Assert.Equal((ushort)0xBFFF, (ushort)((cpu.State.H << 8) | cpu.State.L));
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount);
+    }
+
+    [Fact]
+    public void LdHl_A_WritesWithoutChangingHl()
+    {
+        var (cpu, bus) = CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x3E, 0x11, 0x77);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x11, bus.ReadByte(0xC000));
+        Assert.Equal((ushort)0xC000, (ushort)((cpu.State.H << 8) | cpu.State.L));
+        Assert.Equal((ushort)0x0108, cpu.State.PC);
+        Assert.Equal((ulong)40, cpu.State.CycleCount);
+    }
+
+    [Fact]
+    public void LdA_Hl_ReadsWithoutChangingHl()
+    {
+        var (cpu, bus) = CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x7E);
+        bus.WriteByte(0xC000, 0x44);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x44, cpu.State.A);
+        Assert.Equal((ushort)0xC000, (ushort)((cpu.State.H << 8) | cpu.State.L));
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount);
+    }
+
+    [Fact]
+    public void AddSp_e8_UpdatesSpAndFlags()
+    {
+        var cpu = CreateCpuWithProgram(0x31, 0xF8, 0xFF, 0xE8, 0x08);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0000, cpu.State.SP);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount);
+    }
+
+    [Fact]
+    public void LdHlSpPlusE8_SetsHlAndKeepsSp()
+    {
+        var cpu = CreateCpuWithProgram(0x31, 0xF8, 0xFF, 0xF8, 0x08);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0xFFF8, cpu.State.SP);
+        Assert.Equal((ushort)0x0000, (ushort)((cpu.State.H << 8) | cpu.State.L));
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount);
     }
 
     private static LR35902 CreateCpuWithProgram(params byte[] programAtEntry)
