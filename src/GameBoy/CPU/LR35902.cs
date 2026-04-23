@@ -152,11 +152,29 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
+            case 0xE8:          // ADD SP,e8
+            {
+                byte e8   = ReadNextByte();
+                _state.SP = AddSignedToSP(e8);
+                
+                _state.AddClockCycles(MachineCycle * 3); // total 16
+                return;
+            }
+            
             case 0xEA:          // LD (a16),A
             {
                 _bus.WriteByte(ReadNextWord(), _state.A);
 
                 _state.AddClockCycles(MachineCycle * 3); // total 16
+                return;
+            }
+            
+            case 0xF8:          // LD HL,SP+e8
+            {
+                byte e8   = ReadNextByte();
+                _state.HL = AddSignedToSP(e8);
+                
+                _state.AddClockCycles(MachineCycle * 2); // total 12
                 return;
             }
 
