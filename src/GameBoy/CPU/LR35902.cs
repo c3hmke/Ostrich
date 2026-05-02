@@ -74,11 +74,14 @@ public sealed class LR35902 : ICPU
                 }
                 
                 // Timing:  (12 total cycles)
-                //  - 4 cycles already spent on opcode fetch.
-                //  - LD rr,d16 takes 12 total, so add 8 more.
+                //  - opcode fetch: 4 cycles.
+                //  - LD rr,d16:    8 cycles.
                 _state.AddClockCycles(MachineCycle * 2);
                 return;
             }
+            
+            //--- LD (BC/DE),A
+            
 
             //----------    LD8    ----------//
             case 0x3E:          // LD A,d8
@@ -119,6 +122,23 @@ public sealed class LR35902 : ICPU
             }
 
             //----------    MEM    ----------//
+            //--- LD (BC/DE),A
+            case 0x02:          // LD (BC), A
+            case 0x12:          // LD (DE), A
+            {
+                // Select the destination address from BC/DE based on opcode.
+                ushort dest = opcode == 0x02 ? _state.BC : _state.DE;
+                
+                // Store accumulator into memory at the destination address.
+                _bus.WriteByte(dest, _state.A);
+                
+                // Timing:  (8 total)
+                //  - opcode fetch: 4 cycles.
+                //  - LD (BC/DE),A: 4 cycles.
+                _state.AddClockCycles(MachineCycle);
+                return;
+            }
+            
             case 0x22:          // LD (HL+),A
             {
                 WriteAtHL(_state.A, HLStep.Increment);
