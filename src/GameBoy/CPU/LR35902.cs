@@ -249,6 +249,33 @@ public sealed class LR35902 : ICPU
 
                 return;
             }
+            
+            case 0xC3:          // JP a16
+            {
+                _state.PC = ReadNextWord();
+                
+                _state.AddClockCycles(MachineCycle * 3); // total 16
+                return;
+            }
+
+            case 0xC9:          // RET
+            {
+                _state.PC = PopWord();
+                
+                _state.AddClockCycles(MachineCycle * 3); // total 16
+                return;
+            }
+
+            case 0xCD:          // CALL a16
+            {
+                ushort target = ReadNextWord();
+                
+                PushWord(_state.PC);
+                _state.PC = target;
+                
+                _state.AddClockCycles(MachineCycle * 5); // total 24
+                return;
+            }
 
             //----------    MEM    ----------//
             //--- LD (BC/DE),A
@@ -327,35 +354,6 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
-            //----------    FLOW    ----------//
-            case 0xC3:          // JP a16
-            {
-                _state.PC = ReadNextWord();
-                
-                _state.AddClockCycles(MachineCycle * 3); // total 16
-                return;
-            }
-
-            case 0xC9:          // RET
-            {
-                _state.PC = PopWord();
-                
-                _state.AddClockCycles(MachineCycle * 3); // total 16
-                return;
-            }
-
-            case 0xCD:          // CALL a16
-            {
-                ushort target = ReadNextWord();
-                
-                PushWord(_state.PC);
-                _state.PC = target;
-                
-                _state.AddClockCycles(MachineCycle * 5); // total 24
-                return;
-            }
-
-            //----------    MEM    ----------//
             case 0xEA:          // LD (a16),A
             {
                 _bus.WriteByte(ReadNextWord(), _state.A);
