@@ -46,6 +46,45 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0103, cpu.State.PC);
         Assert.Equal((ulong)12, cpu.State.CycleCount);
     }
+
+    [Fact] // Verifies LD BC,d16 writes a 16-bit immediate into BC.
+    public void LdBc_d16_LoadsImmediateIntoBc()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0x01, 0x34, 0x12);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x12, cpu.State.B);
+        Assert.Equal((byte)0x34, cpu.State.C);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies LD DE,d16 writes a 16-bit immediate into DE.
+    public void LdDe_d16_LoadsImmediateIntoDe()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0x11, 0x34, 0x12);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x12, cpu.State.D);
+        Assert.Equal((byte)0x34, cpu.State.E);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies LD HL,d16 writes a 16-bit immediate into HL.
+    public void LdHl_d16_LoadsImmediateIntoHl()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0x21, 0x34, 0x12);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x12, cpu.State.H);
+        Assert.Equal((byte)0x34, cpu.State.L);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount);
+    }
     
     [Fact] // Verifies LD (a16),A stores accumulator contents at an absolute address.
     public void LdA16_A_WritesAccumulatorToAbsoluteAddress()

@@ -54,6 +54,7 @@ public sealed class LR35902 : ICPU
             case 0x00: return;  // NOP
 
             //----------    LD16    ----------//
+            //--- LD rr,d16
             case 0x01:          // LD BC,d16
             case 0x11:          // LD DE,d16
             case 0x21:          // LD HL,d16
@@ -68,8 +69,8 @@ public sealed class LR35902 : ICPU
                 {
                     case 0x00: _state.BC = val; break;
                     case 0x01: _state.DE = val; break;
-                    case 0x10: _state.HL = val; break;
-                    case 0x11: _state.SP = val; break;
+                    case 0x02: _state.HL = val; break;
+                    case 0x03: _state.SP = val; break;
                 }
                 
                 // Timing:  (12 total cycles)
