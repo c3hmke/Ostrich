@@ -50,8 +50,19 @@ public sealed class LR35902 : ICPU
 
         switch (opcode)
         {
+            //----------    MISC    ----------//
             case 0x00: return;  // NOP
 
+            //----------    LD16    ----------//
+            case 0x31:          // LD SP,d16
+            {
+                _state.SP = ReadNextWord();
+                
+                _state.AddClockCycles(MachineCycle * 2); // total 12
+                return;
+            }
+
+            //----------    LD8    ----------//
             case 0x3E:          // LD A,d8
             {
                 _state.A = ReadNextByte();
@@ -59,10 +70,11 @@ public sealed class LR35902 : ICPU
                 _state.AddClockCycles(MachineCycle); // total 8
                 return;
             }
-
+            
+            //----------    FLOW    ----------//
             case 0x18:          // JR r8
             {
-                sbyte offset = unchecked((sbyte)ReadNextByte());                
+                sbyte offset = unchecked((sbyte)ReadNextByte());
                 _state.PC = (ushort)(_state.PC + offset);
                 
                 _state.AddClockCycles(MachineCycle * 2); // total 12
@@ -87,7 +99,8 @@ public sealed class LR35902 : ICPU
 
                 return;
             }
-            
+
+            //----------    MEM    ----------//
             case 0x22:          // LD (HL+),A
             {
                 WriteAtHL(_state.A, HLStep.Increment);
@@ -95,27 +108,19 @@ public sealed class LR35902 : ICPU
                 _state.AddClockCycles(MachineCycle); // total 8
                 return;
             }
-            
-            case 0x2A:          // LD A,(HL+)
-            {
-                _state.A = ReadAtHL(HLStep.Increment);
-                
-                _state.AddClockCycles(MachineCycle); // total 8
-                return;
-            }
 
-            case 0x31:          // LD SP,d16
-            {
-                _state.SP = ReadNextWord();
-                
-                _state.AddClockCycles(MachineCycle * 2); // total 12
-                return;
-            }
-            
             case 0x32:          // LD (HL-),A
             {
                 WriteAtHL(_state.A, HLStep.Decrement);
 
+                _state.AddClockCycles(MachineCycle); // total 8
+                return;
+            }
+
+            case 0x2A:          // LD A,(HL+)
+            {
+                _state.A = ReadAtHL(HLStep.Increment);
+                
                 _state.AddClockCycles(MachineCycle); // total 8
                 return;
             }
@@ -144,9 +149,18 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
-            case 0xC3:          // JP a16          
+            //----------    FLOW    ----------//
+            case 0xC3:          // JP a16
             {
                 _state.PC = ReadNextWord();
+                
+                _state.AddClockCycles(MachineCycle * 3); // total 16
+                return;
+            }
+
+            case 0xC9:          // RET
+            {
+                _state.PC = PopWord();
                 
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
@@ -163,27 +177,29 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
-            case 0xC9:          // RET
+            //----------    MEM    ----------//
+            case 0xEA:          // LD (a16),A
             {
-                _state.PC = PopWord();
-                
+                _bus.WriteByte(ReadNextWord(), _state.A);
+
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
             }
-            
+
+            case 0xFA:          // LD A,(a16)
+            {
+                _state.A = _bus.ReadByte(ReadNextWord());
+
+                _state.AddClockCycles(MachineCycle * 3); // total 16
+                return;
+            }
+
+            //----------    ALU16    ----------//
             case 0xE8:          // ADD SP,e8
             {
                 byte e8   = ReadNextByte();
                 _state.SP = AddSignedToSP(e8);
                 
-                _state.AddClockCycles(MachineCycle * 3); // total 16
-                return;
-            }
-            
-            case 0xEA:          // LD (a16),A
-            {
-                _bus.WriteByte(ReadNextWord(), _state.A);
-
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
             }
@@ -194,14 +210,6 @@ public sealed class LR35902 : ICPU
                 _state.HL = AddSignedToSP(e8);
                 
                 _state.AddClockCycles(MachineCycle * 2); // total 12
-                return;
-            }
-
-            case 0xFA:          // LD (a16),A
-            {
-                _state.A = _bus.ReadByte(ReadNextWord());
-
-                _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
             }
             
