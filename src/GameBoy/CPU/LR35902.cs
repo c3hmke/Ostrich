@@ -105,6 +105,30 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
+            //--- DEC rr
+            case 0x0B:          // DEC BC
+            case 0x1B:          // DEC DE
+            case 0x2B:          // DEC HL
+            case 0x3B:          // DEC SP
+            {
+                // Bits 5-4 encode the 16-bit register target:
+                // 00=BC, 01=DE, 10=HL, 11=SP.
+                switch ((opcode >> 4) & 0x03)
+                {
+                    case 0x00: _state.BC--; break;
+                    case 0x01: _state.DE--; break;
+                    case 0x02: _state.HL--; break;
+                    case 0x03: _state.SP--; break;
+                }
+                // DEC rr does not affect flags on LR35902.
+
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - INC rr:       4 cycles.
+                _state.AddClockCycles(MachineCycle);
+                return;
+            }
+            
 
             //----------    LD8    ----------//
             case 0x3E:          // LD A,d8
