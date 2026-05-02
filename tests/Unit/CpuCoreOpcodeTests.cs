@@ -66,6 +66,69 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)12, cpu.State.CycleCount);
     }
 
+    [Fact] // Verifies INC BC increments the BC register pair by one.
+    public void IncBc_IncrementsBc()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x01, 0x34, 0x12, // LD BC,0x1234
+            0x03              // INC BC
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x12, cpu.State.B);
+        Assert.Equal((byte)0x35, cpu.State.C);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 12 + 8
+    }
+
+    [Fact] // Verifies INC DE increments the DE register pair by one.
+    public void IncDe_IncrementsDe()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x11, 0x34, 0x12, // LD DE,0x1234
+            0x13              // INC DE
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x12, cpu.State.D);
+        Assert.Equal((byte)0x35, cpu.State.E);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 12 + 8
+    }
+
+    [Fact] // Verifies INC HL increments the HL register pair by one.
+    public void IncHl_IncrementsHl()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x21, 0x34, 0x12, // LD HL,0x1234
+            0x23              // INC HL
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x12, cpu.State.H);
+        Assert.Equal((byte)0x35, cpu.State.L);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 12 + 8
+    }
+
+    [Fact] // Verifies INC SP increments the stack pointer by one.
+    public void IncSp_IncrementsSp()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0x33);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0xFFFF, cpu.State.SP);
+        Assert.Equal((ushort)0x0101, cpu.State.PC);
+        Assert.Equal((ulong)8, cpu.State.CycleCount);
+    }
+
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
     {
