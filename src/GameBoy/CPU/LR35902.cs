@@ -55,10 +55,7 @@ public sealed class LR35902 : ICPU
 
             //----------    LD16    ----------//
             //--- LD rr,d16
-            case 0x01:          // LD BC,d16
-            case 0x11:          // LD DE,d16
-            case 0x21:          // LD HL,d16
-            case 0x31:          // LD SP,d16
+            case 0x01: case 0x11: case 0x21: case 0x31:
             {
                 // Read the next 16-bits from bus; advances PC past both bytes.
                 ushort val = ReadNextWord();
@@ -82,10 +79,7 @@ public sealed class LR35902 : ICPU
             
             //----------    ALU16    ----------//
             //--- INC rr
-            case 0x03:          // INC BC
-            case 0x13:          // INC DE
-            case 0x23:          // INC HL
-            case 0x33:          // INC SP
+            case 0x03: case 0x13: case 0x23: case 0x33:
             {
                 // Bits 5-4 encode the 16-bit register target:
                 // 00=BC, 01=DE, 10=HL, 11=SP.
@@ -106,10 +100,7 @@ public sealed class LR35902 : ICPU
             }
             
             //--- DEC rr
-            case 0x0B:          // DEC BC
-            case 0x1B:          // DEC DE
-            case 0x2B:          // DEC HL
-            case 0x3B:          // DEC SP
+            case 0x0B: case 0x1B: case 0x2B: case 0x3B:
             {
                 // Bits 5-4 encode the 16-bit register target:
                 // 00=BC, 01=DE, 10=HL, 11=SP.
@@ -138,6 +129,35 @@ public sealed class LR35902 : ICPU
                 _state.AddClockCycles(MachineCycle); // total 8
                 return;
             }
+            
+            //----------    ALU8    ----------//
+            //--- INC r/(HL)
+            case 0x04: case 0x0C: case 0x14: case 0x1C:
+            case 0x24: case 0x2C: case 0x34: case 0x3C:
+            {
+                // Bits 5-3 of this opcode select the target register index:
+                // 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
+                int target = (opcode >> 3) & 0x07;
+                
+                byte old    = ReadReg8(target); // Read current 8-bit value from the selected source.
+                byte result = (byte)(old + 1);  // Perform 8-bit increment with wraparound (0xFF -> 0x00).
+                bool carry  = _state.FlagC;     // INC affects Z, N, H and leaves C unchanged. Preserve carry.
+                
+                SetFlagsZNHC(
+                    z: result == 0,             // Z: Set if result is 0.
+                    n: false,                   // N: Reset for increment.
+                    h: (old & 0x0F) == 0X0F,    // H: Set when low nibble overflowed
+                    c: carry);                  // C: Unchanged
+                
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - HL form only: 8 cycles.
+                if (target == 6)
+                    _state.AddClockCycles(MachineCycle * 2);
+                
+                return;
+            }
+
             
             //----------    FLOW    ----------//
             case 0x18:          // JR r8
@@ -170,8 +190,7 @@ public sealed class LR35902 : ICPU
 
             //----------    MEM    ----------//
             //--- LD (BC/DE),A
-            case 0x02:          // LD (BC), A
-            case 0x12:          // LD (DE), A
+            case 0x02: case 0x12:
             {
                 // Select the destination address from BC/DE based on opcode.
                 ushort dest = (opcode == 0x02 ? _state.BC : _state.DE);
@@ -187,8 +206,7 @@ public sealed class LR35902 : ICPU
             }
             
             //--- LD (BC/DE),A
-            case 0x0A:          // LD A,(BC)
-            case 0x1A:          // LD A,(DE)
+            case 0x0A: case 0x1A:
             {
                 // Select the source address from BC/DE based on opcode.
                 ushort src = (opcode == 0x0A ? _state.BC : _state.DE);
@@ -204,8 +222,7 @@ public sealed class LR35902 : ICPU
             }
             
             // --- LD (HL+/-),A
-            case 0x22:          // LD (HL+),A
-            case 0x32:          // LD (HL-),A
+            case 0x22: case 0x32:
             {
                 // Write to HL then increment or decrement based on opcode.
                 WriteAtHL(_state.A, 
@@ -219,8 +236,7 @@ public sealed class LR35902 : ICPU
             }
 
             // --- LD A,(HL+/-)
-            case 0x2A:          // LD A,(HL+)
-            case 0x3A:          // LD A,(HL-)
+            case 0x2A: case 0x3A:
             {
                 // Read from HL then increment or decrement based on opcode.
                 _state.A = ReadAtHL(
