@@ -156,35 +156,33 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
+            // --- LD (HL+/-),A
             case 0x22:          // LD (HL+),A
-            {
-                WriteAtHL(_state.A, HLStep.Increment);
-                
-                _state.AddClockCycles(MachineCycle); // total 8
-                return;
-            }
-
             case 0x32:          // LD (HL-),A
             {
-                WriteAtHL(_state.A, HLStep.Decrement);
+                // Write to HL then increment or decrement based on opcode.
+                WriteAtHL(_state.A, 
+                    opcode == 0x22 ? HLStep.Increment : HLStep.Decrement);
 
-                _state.AddClockCycles(MachineCycle); // total 8
+                // Timing:  (8 total)
+                //  - opcode fetch: 4 cycles.
+                //  - LD (HL+/-),A: 4 cycles.
+                _state.AddClockCycles(MachineCycle);
                 return;
             }
 
+            // --- LD A,(HL+/-)
             case 0x2A:          // LD A,(HL+)
-            {
-                _state.A = ReadAtHL(HLStep.Increment);
-                
-                _state.AddClockCycles(MachineCycle); // total 8
-                return;
-            }
-            
             case 0x3A:          // LD A,(HL-)
             {
-                _state.A = ReadAtHL(HLStep.Decrement);
-                
-                _state.AddClockCycles(MachineCycle); // total 8
+                // Read from HL then increment or decrement based on opcode.
+                _state.A = ReadAtHL(
+                    opcode == 0x2A ? HLStep.Increment : HLStep.Decrement);
+
+                // Timing:  (8 total)
+                //  - opcode fetch: 4 cycles.
+                //  - LD (HL+/-),A: 4 cycles.
+                _state.AddClockCycles(MachineCycle);
                 return;
             }
             
