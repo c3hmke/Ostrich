@@ -4,7 +4,7 @@ namespace Unit;
 
 public sealed class CpuCoreOpcodeTests
 {
-    [Fact]
+    [Fact] // Verifies NOP advances PC by one byte and consumes one machine cycle.
     public void Nop_AdvancesPcAndCycleCount()
     {
         var cpu = TestCpuFactory.CreateCpuWithProgram(0x00);
@@ -14,16 +14,16 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0101, cpu.State.PC);
         Assert.Equal((ulong)4, cpu.State.CycleCount);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies unimplemented opcodes fail fast with NotSupportedException.
     public void UnsupportedOpcode_Throws()
     {
         var cpu = TestCpuFactory.CreateCpuWithProgram(0xD3);
 
         Assert.Throws<NotSupportedException>(() => cpu.StepInstruction());
     }
-
-    [Fact]
+    
+    [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
     {
         var cpu = TestCpuFactory.CreateCpuWithProgram(0x3E, 0x42);
@@ -34,8 +34,8 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0102, cpu.State.PC);
         Assert.Equal((ulong)8, cpu.State.CycleCount);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies LD SP,d16 writes a 16-bit immediate into SP.
     public void LdSp_d16_LoadsImmediateIntoSp()
     {
         var cpu = TestCpuFactory.CreateCpuWithProgram(0x31, 0x34, 0x12);
@@ -46,8 +46,8 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0103, cpu.State.PC);
         Assert.Equal((ulong)12, cpu.State.CycleCount);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies LD (a16),A stores accumulator contents at an absolute address.
     public void LdA16_A_WritesAccumulatorToAbsoluteAddress()
     {
         var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0x3E, 0x77, 0xEA, 0x00, 0xC0);
@@ -59,8 +59,8 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0105, cpu.State.PC);
         Assert.Equal((ulong)24, cpu.State.CycleCount);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies LD A,(a16) reads a byte from absolute address into A.
     public void LdA_a16_ReadsAccumulatorFromAbsoluteAddress()
     {
         var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0xFA, 0x00, 0xC0);

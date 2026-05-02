@@ -4,7 +4,7 @@ namespace Unit;
 
 public sealed class CpuMemoryHlOpcodeTests
 {
-    [Fact]
+    [Fact] // Verifies LD (HL+),A writes to HL then increments HL.
     public void LdHlInc_A_WritesAtHlThenIncrementsHl()
     {
         var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x3E, 0x5A, 0x22);
@@ -19,8 +19,8 @@ public sealed class CpuMemoryHlOpcodeTests
         Assert.Equal((ushort)0x0108, cpu.State.PC);
         Assert.Equal((ulong)40, cpu.State.CycleCount);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies LD A,(HL+) reads from HL then increments HL.
     public void LdA_HlInc_ReadsAtHlThenIncrementsHl()
     {
         var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x2A);
@@ -35,8 +35,8 @@ public sealed class CpuMemoryHlOpcodeTests
         Assert.Equal((ushort)0x0106, cpu.State.PC);
         Assert.Equal((ulong)32, cpu.State.CycleCount);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies LD (HL-),A writes to HL then decrements HL.
     public void LdHlDec_A_WritesAtHlThenDecrementsHl()
     {
         var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x3E, 0x9B, 0x32);
@@ -51,8 +51,8 @@ public sealed class CpuMemoryHlOpcodeTests
         Assert.Equal((ushort)0x0108, cpu.State.PC);
         Assert.Equal((ulong)40, cpu.State.CycleCount);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies LD A,(HL-) reads from HL then decrements HL.
     public void LdA_HlDec_ReadsAtHlThenDecrementsHl()
     {
         var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x3A);
@@ -67,8 +67,8 @@ public sealed class CpuMemoryHlOpcodeTests
         Assert.Equal((ushort)0x0106, cpu.State.PC);
         Assert.Equal((ulong)32, cpu.State.CycleCount);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies LD (HL),A writes memory without modifying HL.
     public void LdHl_A_WritesWithoutChangingHl()
     {
         var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x3E, 0x11, 0x77);
@@ -83,8 +83,8 @@ public sealed class CpuMemoryHlOpcodeTests
         Assert.Equal((ushort)0x0108, cpu.State.PC);
         Assert.Equal((ulong)40, cpu.State.CycleCount);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies LD A,(HL) reads memory without modifying HL.
     public void LdA_Hl_ReadsWithoutChangingHl()
     {
         var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0x31, 0x00, 0xC0, 0xF8, 0x00, 0x7E);

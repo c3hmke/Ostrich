@@ -5,7 +5,7 @@ namespace Unit;
 
 public sealed class LR35902StateTests
 {
-    [Fact]
+    [Fact] // Verifies pair setters split high/low bytes into component registers.
     public void RegisterPairSetters_UpdateComponentRegisters()
     {
         var state = new LR35902State
@@ -25,8 +25,8 @@ public sealed class LR35902StateTests
         Assert.Equal((byte)0xBC, state.H);
         Assert.Equal((byte)0xDE, state.L);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies pair getters recombine component registers into 16-bit values.
     public void RegisterPairGetters_CombineRegisters()
     {
         var state = new LR35902State
@@ -42,8 +42,8 @@ public sealed class LR35902StateTests
         Assert.Equal((ushort)0x9ABC, state.DE);
         Assert.Equal((ushort)0xDEF0, state.HL);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies SetFlags maps Z/N/H/C exactly onto the high nibble of F.
     public void SetFlags_SetsExactHighNibble()
     {
         var state = new LR35902State();
@@ -56,8 +56,8 @@ public sealed class LR35902StateTests
         Assert.True(state.FlagH);
         Assert.False(state.FlagC);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies individual flag updates never pollute the low nibble of F.
     public void SetFlagOperations_PreserveLowNibbleAsZero()
     {
         var state = new LR35902State
@@ -73,8 +73,8 @@ public sealed class LR35902StateTests
         Assert.Equal((byte)0x50, state.F);
         Assert.Equal((byte)0x00, (byte)(state.F & 0x0F));
     }
-
-    [Fact]
+    
+    [Fact] // Verifies Reset restores canonical power-on state for counters/registers.
     public void Reset_RestoresDefaultCpuState()
     {
         var state = new LR35902State

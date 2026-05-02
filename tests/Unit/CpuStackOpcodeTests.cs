@@ -4,7 +4,7 @@ namespace Unit;
 
 public sealed class CpuStackOpcodeTests
 {
-    [Fact]
+    [Fact] // Verifies CALL pushes return address to stack and jumps to target.
     public void Call_a16_PushesReturnAddressAndJumps()
     {
         var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0xCD, 0x34, 0x12);
@@ -17,8 +17,8 @@ public sealed class CpuStackOpcodeTests
         Assert.Equal((byte)0x01, bus.ReadByte(0xFFFD));
         Assert.Equal((ulong)24, cpu.State.CycleCount);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies RET pops the return address from stack back into PC.
     public void Ret_PopsAddressFromStack()
     {
         var cpu = TestCpuFactory.CreateCpuWithProgram(

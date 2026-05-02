@@ -4,7 +4,7 @@ namespace Unit;
 
 public sealed class CpuSpMathOpcodeTests
 {
-    [Fact]
+    [Fact] // Verifies ADD SP,e8 applies signed addition and sets H/C flags correctly.
     public void AddSp_e8_UpdatesSpAndFlags()
     {
         var cpu = TestCpuFactory.CreateCpuWithProgram(0x31, 0xF8, 0xFF, 0xE8, 0x08);
@@ -20,8 +20,8 @@ public sealed class CpuSpMathOpcodeTests
         Assert.Equal((ushort)0x0105, cpu.State.PC);
         Assert.Equal((ulong)28, cpu.State.CycleCount);
     }
-
-    [Fact]
+    
+    [Fact] // Verifies LD HL,SP+e8 computes HL, preserves SP, and updates flags.
     public void LdHlSpPlusE8_SetsHlAndKeepsSp()
     {
         var cpu = TestCpuFactory.CreateCpuWithProgram(0x31, 0xF8, 0xFF, 0xF8, 0x08);
