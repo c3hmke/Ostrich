@@ -120,6 +120,38 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
+            //--- ADD SP,e8
+            case 0xE8:
+            {
+                byte e8   = ReadNextByte();     // Read signed 8-bit immediate operand.
+                _state.SP = AddSignedToSP(e8);  // Add signed immediate to SP.
+                
+                // Helper applies LR35902 flag behavior for this instruction:
+                // Z=0, N=0, H/C from low-byte carry behavior.
+                
+                // Timing:  (16 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - ADD SP,e8:    12 cycles.
+                _state.AddClockCycles(MachineCycle * 3);
+                return;
+            }
+            
+            //--- LD HL,SP+e8
+            case 0xF8:
+            {
+                
+                byte e8   = ReadNextByte();     // Read signed 8-bit immediate operand.
+                _state.HL = AddSignedToSP(e8);  // Compute SP + signed immediate and store into HL.
+                
+                // Uses same flag behavior as ADD SP,e8 via shared helper.
+
+                // Timing:  (16 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - ADD SP,e8:    12 cycles.
+                _state.AddClockCycles(MachineCycle * 2); // total 12
+                return;
+            }
+            
 
             //----------    LD8    ----------//
             case 0x3E:          // LD A,d8
@@ -188,8 +220,6 @@ public sealed class LR35902 : ICPU
                 
                 return;
             }
-
-
             
             //----------    FLOW    ----------//
             case 0x18:          // JR r8
@@ -339,25 +369,6 @@ public sealed class LR35902 : ICPU
                 _state.A = _bus.ReadByte(ReadNextWord());
 
                 _state.AddClockCycles(MachineCycle * 3); // total 16
-                return;
-            }
-
-            //----------    ALU16    ----------//
-            case 0xE8:          // ADD SP,e8
-            {
-                byte e8   = ReadNextByte();
-                _state.SP = AddSignedToSP(e8);
-                
-                _state.AddClockCycles(MachineCycle * 3); // total 16
-                return;
-            }
-            
-            case 0xF8:          // LD HL,SP+e8
-            {
-                byte e8   = ReadNextByte();
-                _state.HL = AddSignedToSP(e8);
-                
-                _state.AddClockCycles(MachineCycle * 2); // total 12
                 return;
             }
             
