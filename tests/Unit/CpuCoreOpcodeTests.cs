@@ -192,6 +192,122 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)8, cpu.State.CycleCount);
     }
 
+    [Fact] // Verifies INC C sets half-carry when low nibble overflows (0x0F -> 0x10).
+    public void IncC_HalfCarryEdge_SetsHalfCarryFlag()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x01, 0x0F, 0x12, // LD BC,0x120F
+            0x0C              // INC C
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x10, cpu.State.C);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 12 + 4
+    }
+
+    [Fact] // Verifies INC C wraps to 0x00 and sets Z/H when incrementing 0xFF.
+    public void IncC_OverflowToZero_SetsZeroAndHalfCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x01, 0xFF, 0x12, // LD BC,0x12FF
+            0x0C              // INC C
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.C);
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 12 + 4
+    }
+
+    [Fact] // Verifies DEC C sets half-carry on half-borrow edge (0x10 -> 0x0F).
+    public void DecC_HalfBorrowEdge_SetsHalfCarryFlag()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x01, 0x10, 0x12, // LD BC,0x1210
+            0x0D              // DEC C
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x0F, cpu.State.C);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 12 + 4
+    }
+
+    [Fact] // Verifies DEC C reaches zero and does not set H when decrementing 0x01.
+    public void DecC_ToZero_SetsZeroAndKeepsHalfCarryClear()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x01, 0x01, 0x12, // LD BC,0x1201
+            0x0D              // DEC C
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.C);
+        Assert.True(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 12 + 4
+    }
+
+    [Fact] // Verifies INC (HL) updates memory and sets H on nibble overflow.
+    public void IncAtHl_HalfCarryEdge_UpdatesMemoryAndFlags()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x34              // INC (HL)
+        );
+        bus.WriteByte(0xC000, 0x0F);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x10, bus.ReadByte(0xC000));
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 12 + 12
+    }
+
+    [Fact] // Verifies DEC (HL) updates memory and sets H on half-borrow edge.
+    public void DecAtHl_HalfBorrowEdge_UpdatesMemoryAndFlags()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x35              // DEC (HL)
+        );
+        bus.WriteByte(0xC000, 0x10);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x0F, bus.ReadByte(0xC000));
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 12 + 12
+    }
+
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
     {
