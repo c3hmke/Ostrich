@@ -54,11 +54,28 @@ public sealed class LR35902 : ICPU
             case 0x00: return;  // NOP
 
             //----------    LD16    ----------//
+            case 0x01:          // LD BC,d16
+            case 0x11:          // LD DE,d16
+            case 0x21:          // LD HL,d16
             case 0x31:          // LD SP,d16
             {
-                _state.SP = ReadNextWord();
+                // Read the next 16-bits from bus; advances PC past both bytes.
+                ushort val = ReadNextWord();
+
+                // bits 5-4 of these opcodes encode which 16-bit register pair to load:
+                // 00=BC, 01=DE, 10=HL, 11=SP
+                switch ((opcode >> 4) & 0x03)
+                {
+                    case 0x00: _state.BC = val; break;
+                    case 0x01: _state.DE = val; break;
+                    case 0x10: _state.HL = val; break;
+                    case 0x11: _state.SP = val; break;
+                }
                 
-                _state.AddClockCycles(MachineCycle * 2); // total 12
+                // Timing:  (12 total cycles)
+                //  - 4 cycles already spent on opcode fetch.
+                //  - LD rr,d16 takes 12 total, so add 8 more.
+                _state.AddClockCycles(MachineCycle * 2);
                 return;
             }
 
