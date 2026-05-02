@@ -113,6 +113,40 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0106, cpu.State.PC);
         Assert.Equal((ulong)28, cpu.State.CycleCount); // 12 + 8 + 8
     }
+
+    [Fact] // Verifies LD A,(BC) loads accumulator from address held in BC.
+    public void LdA_Bc_ReadsAccumulatorFromAddressInBc()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x01, 0x00, 0xC0, // LD BC,0xC000
+            0x0A              // LD A,(BC)
+        );
+        bus.WriteByte(0xC000, 0x6E);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x6E, cpu.State.A);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 12 + 8
+    }
+
+    [Fact] // Verifies LD A,(DE) loads accumulator from address held in DE.
+    public void LdA_De_ReadsAccumulatorFromAddressInDe()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x11, 0x00, 0xC0, // LD DE,0xC000
+            0x1A              // LD A,(DE)
+        );
+        bus.WriteByte(0xC000, 0x91);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x91, cpu.State.A);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 12 + 8
+    }
     
     [Fact] // Verifies LD (a16),A stores accumulator contents at an absolute address.
     public void LdA16_A_WritesAccumulatorToAbsoluteAddress()

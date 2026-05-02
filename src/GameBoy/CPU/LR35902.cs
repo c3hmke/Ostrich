@@ -127,7 +127,7 @@ public sealed class LR35902 : ICPU
             case 0x12:          // LD (DE), A
             {
                 // Select the destination address from BC/DE based on opcode.
-                ushort dest = opcode == 0x02 ? _state.BC : _state.DE;
+                ushort dest = (opcode == 0x02 ? _state.BC : _state.DE);
                 
                 // Store accumulator into memory at the destination address.
                 _bus.WriteByte(dest, _state.A);
@@ -135,6 +135,23 @@ public sealed class LR35902 : ICPU
                 // Timing:  (8 total)
                 //  - opcode fetch: 4 cycles.
                 //  - LD (BC/DE),A: 4 cycles.
+                _state.AddClockCycles(MachineCycle);
+                return;
+            }
+            
+            //--- LD (BC/DE),A
+            case 0x0A:          // LD A,(BC)
+            case 0x1A:          // LD A,(DE)
+            {
+                // Select the source address from BC/DE based on opcode.
+                ushort src = (opcode == 0x0A ? _state.BC : _state.DE);
+                
+                // Load accumulator from memory at the source address.
+                _state.A = _bus.ReadByte(src);
+                
+                // Timing:  (8 total)
+                //  - opcode fetch: 4 cycles.
+                //  - LD A,(BC/DE): 4 cycles.
                 _state.AddClockCycles(MachineCycle);
                 return;
             }
