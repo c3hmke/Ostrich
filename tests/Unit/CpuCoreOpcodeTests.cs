@@ -910,6 +910,115 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal(expectedCycles, cpu.State.CycleCount);
     }
 
+    [Fact] // Verifies ADD A,B sums register operand into A.
+    public void AddA_B_AddsRegisterOperand()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x12, // LD A,0x12
+            0x06, 0x22, // LD B,0x22
+            0x80        // ADD A,B
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x34, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 8 + 4
+    }
+
+    [Fact] // Verifies ADD A,E sets half-carry when low nibble overflows.
+    public void AddA_E_HalfCarryEdge_SetsHalfCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x0F, // LD A,0x0F
+            0x1E, 0x01, // LD E,0x01
+            0x83        // ADD A,E
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x10, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 8 + 4
+    }
+
+    [Fact] // Verifies ADD A,H sets carry and zero on 8-bit overflow.
+    public void AddA_H_CarryAndZeroEdge_SetsCarryAndZero()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0xFF, // LD A,0xFF
+            0x26, 0x01, // LD H,0x01
+            0x84        // ADD A,H
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 8 + 4
+    }
+
+    [Fact] // Verifies ADD A,(HL) reads memory operand and uses 8-cycle ALU timing.
+    public void AddA_Hl_ReadsMemoryOperandAndAdds()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x3E, 0x10,       // LD A,0x10
+            0x86              // ADD A,(HL)
+        );
+        bus.WriteByte(0xC000, 0x22);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x32, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 12 + 8 + 8
+    }
+
+    [Fact] // Verifies ADD A,A doubles accumulator using same ALU path.
+    public void AddA_A_DoublesAccumulator()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x20, // LD A,0x20
+            0x87        // ADD A,A
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x40, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
+
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
     {

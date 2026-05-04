@@ -242,8 +242,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - r->r form:    0 cycles.
                 //  - HL forms:     4 cycles.
-                if (src == 6 || dst == 6)
-                    _state.AddClockCycles(MachineCycle);
+                if (src == 6 || dst == 6) _state.AddClockCycles(MachineCycle);
                 return;
             }
 
@@ -273,9 +272,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - INC r,r8:     0 cycles
                 //  - INC r,HL:     8 cycles.
-                if (target == 6)
-                    _state.AddClockCycles(MachineCycle * 2);
-                
+                if (target == 6) _state.AddClockCycles(MachineCycle * 2);
                 return;
             }
             
@@ -302,9 +299,33 @@ public sealed class LR35902 : ICPU
                 // Timing:  (8 total cycles)
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
-                if (target == 6)
-                    _state.AddClockCycles(MachineCycle * 2);
+                if (target == 6) _state.AddClockCycles(MachineCycle * 2);
+                return;
+            }
+            
+            //--- ADD A,r
+            case 0x80: case 0x81: case 0x82: case 0x83:
+            case 0x84: case 0x85: case 0x86: case 0x87:
+            {
+                // Bits 2-0 encode source register:
+                // 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
+                int src = opcode & 0x07;
+
+                byte oldA = _state.A;
+                byte val  = ReadReg8(src);   // Read source operand (reg or memory at HL)
+                int  sum  = oldA + val;      // Perform 8-bit addition with wraparound.
+
+                _state.A = (byte)sum;       // Store the result back in A.
+                SetFlagsZNHC(
+                    z: _state.A == 0,                               // set if carry is 0.
+                    n: false,                                       // reset.
+                    h: ((oldA & 0x0F) + (val & 0x0F)) > 0x0F,       // set if carry from bit 3 to bit 4.
+                    c: sum > 0xFF);                                 // set if carry out of bit 7.
                 
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - HL form only: 8 cycles.
+                if (src == 6) _state.AddClockCycles(MachineCycle);
                 return;
             }
 
