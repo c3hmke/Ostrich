@@ -309,8 +309,7 @@ public sealed class LR35902 : ICPU
             {
                 byte oldA = _state.A;
 
-                // Bits 2-0 encode source register:
-                // 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
+                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
                 int src = opcode & 0x07;
 
                 byte val  = ReadReg8(src);   // Read source operand (reg or memory at HL)
@@ -336,12 +335,11 @@ public sealed class LR35902 : ICPU
             {
                 byte oldA    = _state.A;
                 
-                // Bits 2-0 encode source register:
-                // 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
+                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
                 int src = opcode & 0x07;
 
-                int  carryIn = _state.FlagC ? 1 : 0;    // Carry-in is the current C flag.
                 byte val     = ReadReg8(src);           // Read source operand (reg or memory at HL)
+                int  carryIn = _state.FlagC ? 1 : 0;    // Carry-in is the current C flag.
                 int  sum     = oldA + val + carryIn;    // Perform the addition.
                 
                 _state.A = (byte) sum;                  // Store the result back in A.
@@ -364,8 +362,7 @@ public sealed class LR35902 : ICPU
             {
                 byte oldA    = _state.A;
 
-                // Bits 2-0 encode source register:
-                // 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
+                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
                 int src = opcode & 0x07;
                 
                 byte val  = ReadReg8(src);   // Read source operand (reg or memory at HL)
@@ -377,6 +374,33 @@ public sealed class LR35902 : ICPU
                     n: true,                            // set.
                     h: (oldA & 0x0F) < (val & 0x0F),    // set on half-borrow (borrow from bit 4)
                     c: oldA < val);                     // set on full borrow (A < val)
+                
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - HL form only: 8 cycles.
+                if (src == 6) _state.AddClockCycles(MachineCycle);
+                return;
+            }
+            
+            //--- SBC A,r
+            case 0x98: case 0x99: case 0x9A: case 0x9B:
+            case 0x9C: case 0x9D: case 0x9E: case 0x9F:
+            {
+                byte oldA    = _state.A;
+                
+                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
+                int src = opcode & 0x07;
+
+                byte val     = ReadReg8(src);           // Read source operand (reg or memory at HL)
+                int  carryIn = _state.FlagC ? 1 : 0;    // Carry-in is the current C flag.
+                int  diff    = oldA - val - carryIn;    // Perform the subtraction.
+                
+                _state.A = (byte) diff;                  // Store the result back in A.
+                SetFlagsZNHC(
+                    z: _state.A == 0,                               // set if result is 0.
+                    n: true,                                        // set.
+                    h: (oldA & 0x0F) < ((val & 0x0F) + carryIn),    // set on half-borrow (bit 4 borrow).
+                    c: oldA < (val + carryIn));                     // set on full borrow.
                 
                 // Timing:  (8 total cycles)
                 //  - opcode fetch: 4 cycles.

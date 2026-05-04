@@ -1252,6 +1252,161 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
     }
 
+    [Fact] // Verifies SBC A,B subtracts register operand when carry-in is clear.
+    public void SbcA_B_WithoutCarryIn_SubtractsRegisterOperand()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07,       // RLCA -> C=0
+            0x3E, 0x34, // LD A,0x34
+            0x06, 0x12, // LD B,0x12
+            0x98        // SBC A,B
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x22, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0108, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 8 + 4 + 8 + 8 + 4
+    }
+
+    [Fact] // Verifies SBC A,B consumes carry-in during subtraction.
+    public void SbcA_B_WithCarryIn_SubtractsCarryIn()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x34, // LD A,0x34
+            0x06, 0x12, // LD B,0x12
+            0x98        // SBC A,B
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x21, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0108, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 8 + 4 + 8 + 8 + 4
+    }
+
+    [Fact] // Verifies SBC A,E sets half-borrow on nibble borrow with carry-in.
+    public void SbcA_E_HalfBorrowEdge_SetsHalfCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x10, // LD A,0x10
+            0x1E, 0x00, // LD E,0x00
+            0x9B        // SBC A,E
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x0F, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0108, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 8 + 4 + 8 + 8 + 4
+    }
+
+    [Fact] // Verifies SBC A,H sets carry on full borrow with carry-in.
+    public void SbcA_H_BorrowEdge_SetsCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x00, // LD A,0x00
+            0x26, 0x00, // LD H,0x00
+            0x9C        // SBC A,H
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xFF, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0108, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 8 + 4 + 8 + 8 + 4
+    }
+
+    [Fact] // Verifies SBC A,(HL) reads memory operand and uses 8-cycle ALU timing.
+    public void SbcA_Hl_ReadsMemoryOperandAndSubtractsWithCarry()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x3E, 0x80,       // LD A,0x80
+            0x07,             // RLCA -> C=1
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x3E, 0x34,       // LD A,0x34
+            0x9E              // SBC A,(HL)
+        );
+        bus.WriteByte(0xC000, 0x12);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x21, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0109, cpu.State.PC);
+        Assert.Equal((ulong)40, cpu.State.CycleCount); // 8 + 4 + 12 + 8 + 8
+    }
+
+    [Fact] // Verifies SBC A,A produces zero when carry-in is clear.
+    public void SbcA_A_ProducesZeroWhenCarryClear()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07,       // RLCA -> C=0
+            0x3E, 0x20, // LD A,0x20
+            0x9F        // SBC A,A
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 8 + 4 + 8 + 4
+    }
+
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
     {
