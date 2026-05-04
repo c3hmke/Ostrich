@@ -611,6 +611,48 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x010B, cpu.State.PC);
         Assert.Equal((ulong)44, cpu.State.CycleCount); // 8+4+8+4+8+4+4+4+4
     }
+    
+    [Fact] // Verifies SCF sets carry and clears N/H.
+    public void Scf_SetsCarryAndClearsNAndH()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x10, // LD A,0x10
+            0x3D,       // DEC A -> N=1, H=1, Z=0
+            0x37        // SCF
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.True(cpu.State.FlagC);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagZ); // unchanged from DEC result (A=0x0F)
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 4 + 4
+    }
+
+    [Fact] // Verifies SCF preserves Z while forcing carry set.
+    public void Scf_PreservesZFlag()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x01, // LD A,0x01
+            0x3D,       // DEC A -> A=0x00, Z=1, N=1
+            0x37        // SCF
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.True(cpu.State.FlagZ);  // unchanged
+        Assert.True(cpu.State.FlagC);  // set
+        Assert.False(cpu.State.FlagN); // reset
+        Assert.False(cpu.State.FlagH); // reset
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 4 + 4
+    }
 
     [Fact] // Verifies LD B,d8 loads immediate data into B and updates timing/PC.
     public void LdB_d8_LoadsImmediateValueIntoB()

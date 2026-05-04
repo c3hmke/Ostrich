@@ -328,7 +328,7 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
-            //-- CPL (Complement Accumulator)
+            //--- CPL (Complement Accumulator)
             case 0x2F:
             {
                 _state.A = (byte)~_state.A;  // Invert all bits in A (1's complement).
@@ -338,6 +338,20 @@ public sealed class LR35902 : ICPU
                     n: true,            // set.
                     h: true,            // set.
                     c: _state.FlagC);   // unchanged.
+                
+                // Timing:  (4 total cycles)
+                //  - opcode fetch: 4 cycles.
+                return;
+            }
+            
+            //--- SCF (Set Carry Flag)
+            case 0x37:
+            {
+                SetFlagsZNHC(
+                    z: _state.FlagZ,    // unchanged.
+                    n: false,           // reset.
+                    h: false,           // reset.
+                    c: true);           // set.
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
