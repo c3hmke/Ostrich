@@ -119,6 +119,36 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
+            //--- ADD HL,rr
+            case 0x09: case 0x19: case 0x29: case 0x39:
+            {
+                // Bits 5-4 encode the 16-bit source register pair:
+                // 00=BC, 01=DE, 10=HL, 11=SP.
+                ushort rr = ((opcode >> 4) & 0x03) switch
+                {
+                    0x00 => _state.BC,
+                    0x01 => _state.DE,
+                    0x02 => _state.HL,
+                    _    => _state.SP
+                };
+                
+                ushort hl  = _state.HL;     // Keep old HL for half-carry/carry checks.
+                int    sum = hl + rr;       // Then add RR to HL.
+                _state.HL  = (ushort)sum;   // Write back the result.
+                
+                SetFlagsZNHC(
+                    z: _state.FlagZ,                                // unchanged.
+                    n: false,                                       // 0.
+                    h: ((hl & 0x0FFF) + (rr & 0x0FFF)) > 0x0FFF,    // carry from bit 11
+                    c: sum > 0xFFFF);                               // carry from bit 15
+                
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - ADD HL,rr:    4 cycles.
+                _state.AddClockCycles(MachineCycle);
+                return;
+            }
+            
             //--- ADD SP,e8
             case 0xE8:
             {
