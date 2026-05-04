@@ -544,6 +544,98 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
     }
 
+    [Fact] // Verifies RRCA rotates bit 0 into carry and bit 7.
+    public void Rrca_RotatesBit0IntoCarryAndBit7()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x01, // LD A,0x01
+            0x0F        // RRCA
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x80, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
+
+    [Fact] // Verifies RLA rotates left through carry.
+    public void Rla_RotatesLeftThroughCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07,       // RLCA -> clears carry
+            0x3E, 0x80, // LD A,0x80
+            0x17        // RLA
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.False(cpu.State.FlagZ); // RLA always clears Z on GB CPU
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);  // old bit7
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 8 + 4 + 8 + 4
+    }
+
+    [Fact] // Verifies RRA rotates right through carry.
+    public void Rra_RotatesRightThroughCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07,       // RLCA -> clears carry
+            0x3E, 0x01, // LD A,0x01
+            0x1F        // RRA
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.False(cpu.State.FlagZ); // RRA always clears Z on GB CPU
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);  // old bit0
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 8 + 4 + 8 + 4
+    }
+
+    [Fact] // Verifies RRA consumes carry as input into bit 7.
+    public void Rra_UsesCarryInForBit7()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> sets carry=1 and A=0x01
+            0x3E, 0x00, // LD A,0x00 (carry remains set)
+            0x1F        // RRA -> carry-in should set bit 7
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x80, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC); // old bit0 of A=0x00
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 8 + 4 + 8 + 4
+    }
+
     [Fact] // Verifies unimplemented opcodes fail fast with NotSupportedException.
     public void UnsupportedOpcode_Throws()
     {
