@@ -503,6 +503,46 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0103, cpu.State.PC);
         Assert.Equal((ulong)16, cpu.State.CycleCount);
     }
+    
+    [Fact] // Verifies RLCA rotates bit 7 into carry and bit 0.
+    public void Rlca_RotatesBit7IntoCarryAndBit0()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x85, // LD A,0x85
+            0x07        // RLCA
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x0B, cpu.State.A); // 1000_0101 -> 0000_1011
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
+
+    [Fact] // Verifies RLCA on zero keeps A at zero and clears carry.
+    public void Rlca_WithZeroInput_KeepsZeroAndClearsCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07        // RLCA
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.False(cpu.State.FlagZ); // RLCA always clears Z on GB CPU
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
 
     [Fact] // Verifies unimplemented opcodes fail fast with NotSupportedException.
     public void UnsupportedOpcode_Throws()

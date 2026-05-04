@@ -234,6 +234,19 @@ public sealed class LR35902 : ICPU
                 
                 return;
             }
+
+            case 0x07:          // RCLA
+            {
+                bool carry = (_state.A & 0x80) != 0;                    // Capture bit 7, this becomes carry & new bit 0.
+                _state.A   = (byte)((_state.A << 1) | (carry ? 1 : 0)); // Rotate A left circular.
+                
+                // RLCA flags on LR35902: Z=0, N=0, H=0, C=old bit7.
+                SetFlagsZNHC(z: false, n: false, h: false, c: carry);
+                
+                // Timing:  (4 total cycles)
+                //  - opcode fetch: 4 cycles.
+                return;
+            }
             
             //----------    FLOW    ----------//
             case 0x18:          // JR r8
