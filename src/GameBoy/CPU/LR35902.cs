@@ -314,9 +314,9 @@ public sealed class LR35902 : ICPU
                 int src = opcode & 0x07;
 
                 byte val  = ReadReg8(src);   // Read source operand (reg or memory at HL)
-                int  sum  = oldA + val;      // Perform 8-bit addition with wraparound.
+                int  sum  = oldA + val;      // Perform addition with 8-bit wraparound.
 
-                _state.A = (byte)sum;        // Store the result back in A.
+                _state.A = (byte) sum;       // Store the result back in A.
                 SetFlagsZNHC(
                     z: _state.A == 0,                               // set if carry is 0.
                     n: false,                                       // reset.
@@ -344,12 +344,39 @@ public sealed class LR35902 : ICPU
                 byte val     = ReadReg8(src);           // Read source operand (reg or memory at HL)
                 int  sum     = oldA + val + carryIn;    // Perform the addition.
                 
-                _state.A = (byte)sum;
+                _state.A = (byte) sum;                  // Store the result back in A.
                 SetFlagsZNHC(
                     z: _state.A == 0,                                   // set if carry is 0.
                     n: false,                                           // reset.
                     h: ((oldA & 0x0F) + (val & 0x0F) + carryIn) > 0x0F, // set if carry from bit 3.
                     c: sum > 0xFF);                                     // set if carry from bit 7.
+                
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - HL form only: 8 cycles.
+                if (src == 6) _state.AddClockCycles(MachineCycle);
+                return;
+            }
+            
+            //--- SUB A,r
+            case 0x90: case 0x91: case 0x92: case 0x93:
+            case 0x94: case 0x95: case 0x96: case 0x97:
+            {
+                byte oldA    = _state.A;
+
+                // Bits 2-0 encode source register:
+                // 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
+                int src = opcode & 0x07;
+                
+                byte val  = ReadReg8(src);   // Read source operand (reg or memory at HL)
+                int  diff = oldA - val;      // Perform subtraction with 8-bit wraparound.
+                
+                _state.A = (byte) diff;      // Store the result back in A.
+                SetFlagsZNHC(
+                    z: _state.A == 0,                   // set if result is 0.
+                    n: true,                            // set.
+                    h: (oldA & 0x0F) < (val & 0x0F),    // set on half-borrow (borrow from bit 4)
+                    c: oldA < val);                     // set on full borrow (A < val)
                 
                 // Timing:  (8 total cycles)
                 //  - opcode fetch: 4 cycles.
