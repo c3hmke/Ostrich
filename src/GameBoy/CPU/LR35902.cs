@@ -260,6 +260,35 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 return;
             }
+
+            case 0x17:          // RLA
+            {
+                bool oldCarry = _state.FlagC;                            // RLA Rotates left through carry:
+                bool carryOut = (_state.A & 0x80) != 0;                  // old carry -> bit 0, old bit 7 -> new carry.
+                
+                _state.A = (byte)((_state.A << 1) | (oldCarry ? 1 : 0));
+                
+                // RLA flags on LR35902: Z=0, N=0, H=0, C=old bit7.
+                SetFlagsZNHC(z: false, n: false, h: false, c: carryOut);
+                
+                // Timing:  (4 total cycles)
+                //  - opcode fetch: 4 cycles.
+                return;
+            }
+            case 0x1F:          // RRA
+            {
+                bool oldCarry = _state.FlagC;                            // RLA Rotates right through carry:
+                bool carryOut = (_state.A & 0x01) != 0;                  // old carry -> bit 0, old bit 7 -> new carry.
+                
+                _state.A = (byte)((_state.A >> 1) | (oldCarry ? 0x80 : 0x00));
+                
+                // RLA flags on LR35902: Z=0, N=0, H=0, C=old bit7.
+                SetFlagsZNHC(z: false, n: false, h: false, c: carryOut);
+                
+                // Timing:  (4 total cycles)
+                //  - opcode fetch: 4 cycles.
+                return;
+            }
             
             //----------    FLOW    ----------//
             case 0x18:          // JR r8
