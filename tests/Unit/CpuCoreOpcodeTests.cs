@@ -792,6 +792,124 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)24, cpu.State.CycleCount); // 12 + 12
     }
 
+    [Fact] // Verifies LD B,C copies source register C into destination register B.
+    public void LdB_C_CopiesRegisterToRegister()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x0E, 0x42, // LD C,0x42
+            0x41        // LD B,C
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x42, cpu.State.B);
+        Assert.Equal((byte)0x42, cpu.State.C);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
+
+    [Fact] // Verifies LD A,(HL) reads from memory via LD r,r' matrix timing/path.
+    public void LdA_Hl_ReadsFromMemoryViaLdMatrix()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x7E              // LD A,(HL)
+        );
+        bus.WriteByte(0xC000, 0x5A);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x5A, cpu.State.A);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 12 + 8
+    }
+
+    [Fact] // Verifies LD (HL),A writes to memory via LD r,r' matrix timing/path.
+    public void LdHl_A_WritesToMemoryViaLdMatrix()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x3E, 0x77,       // LD A,0x77
+            0x77              // LD (HL),A
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x77, bus.ReadByte(0xC000));
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 12 + 8 + 8
+    }
+
+    [Fact] // Verifies LD D,(HL) reads memory into non-A register through matrix decode.
+    public void LdD_Hl_ReadsIntoRegisterViaLdMatrix()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x56              // LD D,(HL)
+        );
+        bus.WriteByte(0xC000, 0xAB);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xAB, cpu.State.D);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 12 + 8
+    }
+
+    [Theory] // Verifies representative LD r,r' matrix opcodes across reg-reg and HL forms.
+    [InlineData(0x78, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 60UL)] // LD A,B
+    [InlineData(0x5D, 0x00, 0xCC, 0x00, 0x00, 0x00, 0xCC, 0x00, 0x00, 0x00, 60UL)] // LD E,L
+    [InlineData(0x6F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x77, 0x00, 0x00, 60UL)] // LD L,A
+    [InlineData(0x46, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x33, 0x33, 64UL)] // LD B,(HL)
+    [InlineData(0x70, 0x99, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x99, 64UL)] // LD (HL),B
+    public void LdMatrix_RepresentativeOpcodes_WorkAsExpected(
+        byte opcode,
+        byte bInit,
+        byte cInit,
+        byte dInit,
+        byte eInit,
+        byte hInit,
+        byte lInit,
+        byte aInit,
+        byte hlMemInit,
+        byte expectedHlMem,
+        ulong expectedCycles)
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x06, bInit,       // LD B,d8
+            0x0E, cInit,       // LD C,d8
+            0x16, dInit,       // LD D,d8
+            0x1E, eInit,       // LD E,d8
+            0x26, hInit,       // LD H,d8
+            0x2E, lInit,       // LD L,d8
+            0x3E, aInit,       // LD A,d8
+            opcode             // LD r,r'
+        );
+
+        ushort hlAddr = (ushort)((hInit << 8) | lInit);
+        bus.WriteByte(hlAddr, hlMemInit);
+
+        for (int i = 0; i < 8; i++)
+            cpu.StepInstruction();
+
+        Assert.Equal((byte)((opcode == 0x46) ? hlMemInit : bInit), cpu.State.B);
+        Assert.Equal((byte)cInit, cpu.State.C);
+        Assert.Equal((byte)dInit, cpu.State.D);
+        Assert.Equal((byte)((opcode == 0x5D) ? lInit : eInit), cpu.State.E);
+        Assert.Equal((byte)hInit, cpu.State.H);
+        Assert.Equal((byte)((opcode == 0x6F) ? aInit : lInit), cpu.State.L);
+        Assert.Equal((byte)((opcode == 0x78) ? bInit : aInit), cpu.State.A);
+
+        Assert.Equal(expectedHlMem, bus.ReadByte(hlAddr));
+        Assert.Equal((ushort)0x010F, cpu.State.PC);
+        Assert.Equal(expectedCycles, cpu.State.CycleCount);
+    }
+
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
     {
