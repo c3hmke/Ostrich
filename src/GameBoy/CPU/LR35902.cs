@@ -357,6 +357,20 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 return;
             }
+            
+            //--- CCF (Compliment Carry Flag)
+            case 0x3F:
+            {
+                SetFlagsZNHC(
+                    z: _state.FlagZ,    // unchanged.
+                    n: false,           // reset.
+                    h: false,           // reset.
+                    c: !_state.FlagC);  // complement carry.
+                
+                // Timing:  (4 total cycles)
+                //  - opcode fetch: 4 cycles.
+                return;
+            }
 
             //----------    ROTATE    ----------//
             case 0x07:          // RLCA

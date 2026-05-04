@@ -653,6 +653,56 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0104, cpu.State.PC);
         Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 4 + 4
     }
+    
+    [Fact] // Verifies CCF toggles carry from 0 to 1 and clears N/H.
+    public void Ccf_TogglesCarryFromZeroToOne()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07,       // RLCA -> C=0
+            0x3F        // CCF
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.True(cpu.State.FlagC);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagZ); // unchanged from RLCA (Z always 0)
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 4 + 4
+    }
+
+    [Fact] // Verifies CCF toggles carry from 1 to 0 while preserving Z.
+    public void Ccf_TogglesCarryFromOneToZero_AndPreservesZ()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x01, // LD A,0x01
+            0x3D,       // DEC A -> A=0x00, Z=1
+            0x3E, 0x80, // LD A,0x80 (Z unchanged)
+            0x07,       // RLCA -> C=1, Z forced 0
+            0x3E, 0x01, // LD A,0x01
+            0x3D,       // DEC A -> A=0x00, Z=1 (C unchanged = 1)
+            0x3F        // CCF -> C=0, Z preserved
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.False(cpu.State.FlagC);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagZ);  // unchanged by CCF
+        Assert.Equal((ushort)0x010A, cpu.State.PC);
+        Assert.Equal((ulong)40, cpu.State.CycleCount); // 8+4+8+4+8+4+4
+    }
 
     [Fact] // Verifies LD B,d8 loads immediate data into B and updates timing/PC.
     public void LdB_d8_LoadsImmediateValueIntoB()
