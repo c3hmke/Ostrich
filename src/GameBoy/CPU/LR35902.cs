@@ -38,7 +38,7 @@ public sealed class LR35902 : ICPU
     /// <summary> Step the next instruction and executes the opcode found at that instruction. </summary>
     public void StepInstruction()
     {
-        if (_bus is null || _state.Halted)
+        if (_bus is null || _state.Halted || _state.Stopped)
             return;
 
         // Read the Next opcode from the BUS (loaded from the cart)
@@ -56,10 +56,7 @@ public sealed class LR35902 : ICPU
             //---------- CTRL ----------//
             case 0x10:          // STOP
             {
-                // STOP places the CPU into a stopped state until an external event.
-                // This emulator currently has no dedicated STOP state, so we map it
-                // to Halted as a temporary behavior-compatible approximation.
-                _state.Halted = true;
+                _state.Stopped = true;  // Enter stopped state until external wake event.
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
@@ -67,11 +64,9 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
-            case 0x76:
+            case 0x76:          // HALT
             {
-                // HALT stops CPU instruction execution until an interrupt-related wake event.
-                // In the current emulator model, we represent this with the shared Halted flag.
-                _state.Halted = true;
+                _state.Halted = true;   // Enter halted state until interrupt-related wake event.
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.

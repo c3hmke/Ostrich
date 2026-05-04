@@ -14,7 +14,8 @@ public sealed class LR35902State : ICPUState
     public ushort PC         { get; internal set; } = 0x0100;   // Program Counter; Entry point
     public ushort SP         { get; internal set; } = 0xFFFE;   // Stack Pointer;   Top of HRAM
     public ulong  CycleCount { get; internal set; } = 0;        // Clock cycles (T-Cycles)
-    public bool   Halted     { get; internal set; } = false;
+    public bool   Halted     { get; internal set; } = false;    // Halts instruction exec until interrupt
+    public bool   Stopped    { get; internal set; } = false;    // CPU is stopped until external event
 
     //--------------------------------------------------------------------------------------------------//
     //                                           REGISTERS                                              //
@@ -118,7 +119,8 @@ public sealed class LR35902State : ICPUState
     /// <summary> Reset the CPU State, this is usually done when a ROM is loaded </summary>
     public void Reset()
     {
-        CycleCount = 0; Halted = false;
+        CycleCount = 0; 
+        Halted = Stopped = false;
         
         PC = 0x0100; SP = 0xFFFE;
 

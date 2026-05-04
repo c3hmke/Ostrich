@@ -7,6 +7,7 @@ public interface ICPUState
     ushort SP         { get; }
     ulong  CycleCount { get; }
     bool   Halted     { get; }
+    bool   Stopped    { get; }
     
     // Registers
     byte A { get; }

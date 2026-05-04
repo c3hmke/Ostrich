@@ -67,6 +67,7 @@ public class DebugWindow
         ImGui.Text($"SP: 0x{_state.SP:X4}");
         ImGui.Text($"Cycles: {_state.CycleCount}");
         ImGui.Text($"Halted: {_state.Halted}");
+        ImGui.Text($"Stopped: {_state.Stopped}");
 
         ImGui.Separator();
         ImGui.Text("Registers");
