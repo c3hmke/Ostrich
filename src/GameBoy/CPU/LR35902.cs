@@ -206,6 +206,7 @@ public sealed class LR35902 : ICPU
             
 
             //----------    LD8    ----------//
+            //--- LD r,d8
             case 0x06: case 0x0E: case 0x16: case 0x1E: 
             case 0x26: case 0x2E: case 0x36: case 0x3E:
             {
@@ -226,6 +227,26 @@ public sealed class LR35902 : ICPU
                 _state.AddClockCycles((dest == 6) ? MachineCycle * 2 : MachineCycle);
                 return;
             }
+            
+            //--- LD r,r' (0x40..0x7F, except 0x76 which is HALT, 64 opcodes total)
+            case >= 0x40 and <= 0x7F when opcode != 0x76:
+            {
+                // Encoding:
+                int dst = (opcode >> 3) & 0x07; // bits 5-3 = destination register (B,C,D,E,H,L,(HL),A)
+                int src = opcode & 0x07;        // bits 2-0 = source register      (B,C,D,E,H,L,(HL),A)
+                
+                // Read from source register/memory and write to destination register/memory.
+                WriteReg8(dst, ReadReg8(src));
+                
+                // Timing:  (8/12 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - r->r form:    0 cycles.
+                //  - HL forms:     4 cycles.
+                if (src == 6 || dst == 6)
+                    _state.AddClockCycles(MachineCycle);
+                return;
+            }
+
             
             //----------    ALU8    ----------//
             //--- INC r/(HL)
@@ -541,22 +562,6 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD (HL+/-),A: 4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                return;
-            }
-            
-            case 0x77:          // LD (HL),A
-            {
-                WriteAtHL(_state.A);
-
-                _state.AddClockCycles(MachineCycle); // total 8
-                return;
-            }
-            
-            case 0x7E:          // LD A,(HL)
-            {
-                _state.A = ReadAtHL();
-                
-                _state.AddClockCycles(MachineCycle); // total 8
                 return;
             }
 
