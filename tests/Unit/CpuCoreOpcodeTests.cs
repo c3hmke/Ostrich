@@ -308,6 +308,94 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)24, cpu.State.CycleCount); // 12 + 12
     }
 
+    [Fact] // Verifies LD B,d8 loads immediate data into B and updates timing/PC.
+    public void LdB_d8_LoadsImmediateValueIntoB()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0x06, 0x42);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x42, cpu.State.B);
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)8, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies LD C,d8 loads immediate data into C and updates timing/PC.
+    public void LdC_d8_LoadsImmediateValueIntoC()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0x0E, 0x42);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x42, cpu.State.C);
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)8, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies LD D,d8 loads immediate data into D and updates timing/PC.
+    public void LdD_d8_LoadsImmediateValueIntoD()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0x16, 0x42);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x42, cpu.State.D);
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)8, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies LD E,d8 loads immediate data into E and updates timing/PC.
+    public void LdE_d8_LoadsImmediateValueIntoE()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0x1E, 0x42);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x42, cpu.State.E);
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)8, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies LD H,d8 loads immediate data into H and updates timing/PC.
+    public void LdH_d8_LoadsImmediateValueIntoH()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0x26, 0x42);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x42, cpu.State.H);
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)8, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies LD L,d8 loads immediate data into L and updates timing/PC.
+    public void LdL_d8_LoadsImmediateValueIntoL()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0x2E, 0x42);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x42, cpu.State.L);
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)8, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies LD (HL),d8 stores immediate data into memory at HL.
+    public void LdAtHl_d8_WritesImmediateValueAtHl()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x36, 0x42        // LD (HL),0x42
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x42, bus.ReadByte(0xC000));
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 12 + 12
+    }
+
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
     {
