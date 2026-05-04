@@ -12,7 +12,7 @@ public sealed class LR35902 : ICPU
     //                                          ATTRIBUTES                                              //
     //--------------------------------------------------------------------------------------------------//
     // 1 DMG Machine Cycle equates to 4 clock cycles (or T-cycles) on the CPU.
-    private const int MachineCycle = 4;
+    private const uint MachineCycle = 4;
     
     private readonly LR35902State _state = new();
     private          Bus?         _bus;
@@ -154,11 +154,24 @@ public sealed class LR35902 : ICPU
             
 
             //----------    LD8    ----------//
-            case 0x3E:          // LD A,d8
+            case 0x06: case 0x0E: case 0x16: case 0x1E: 
+            case 0x26: case 0x2E: case 0x36: case 0x3E:
             {
-                _state.A = ReadNextByte();
+                // Read the next 8-bits from bus; advances PC past that byte.
+                byte val = ReadNextByte();
                 
-                _state.AddClockCycles(MachineCycle); // total 8
+                // Bits 5-3 encode the destination register index:
+                // 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
+                int dest = (opcode >> 3) & 0x07;
+                
+                WriteReg8(dest, val);
+                
+                
+                // Timing:  (8/12 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - LD r,d8:      4 cycles.
+                //  - LD (HL),d8:   8 cycles.
+                _state.AddClockCycles((dest == 6) ? MachineCycle * 2 : MachineCycle);
                 return;
             }
             
@@ -180,12 +193,13 @@ public sealed class LR35902 : ICPU
                 SetFlagsZNHC(
                     z: result == 0,             // Z: Set if result is 0.
                     n: false,                   // N: Reset for increment.
-                    h: (old & 0x0F) == 0X0F,    // H: Set when low nibble overflowed
+                    h: (old & 0x0F) == 0x0F,    // H: Set when low nibble overflowed
                     c: carry);                  // C: Unchanged
                 
-                // Timing:  (8 total cycles)
+                // Timing:  (4/12 total cycles)
                 //  - opcode fetch: 4 cycles.
-                //  - HL form only: 8 cycles.
+                //  - INC r,r8:     0 cycles
+                //  - INC r,HL:     8 cycles.
                 if (target == 6)
                     _state.AddClockCycles(MachineCycle * 2);
                 
