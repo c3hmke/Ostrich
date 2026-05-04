@@ -394,7 +394,8 @@ public sealed class LR35902 : ICPU
             }
 
             //----------    ROTATE    ----------//
-            case 0x07:          // RLCA
+            //--- RLCA (Rotate Left Circular Accumulator)
+            case 0x07:
             {
                 bool carry = (_state.A & 0x80) != 0;                         // Capture bit 7, this becomes carry & new bit 0.
                 _state.A   = (byte)((_state.A << 1) | (carry ? 1 : 0));      // Rotate A left circular.
@@ -406,7 +407,8 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 return;
             }
-            case 0x0F:          // RRCA
+            //--- RRCA (Rotate Right Circular Accumulator)
+            case 0x0F:
             {
                 bool carry = (_state.A & 0x01) != 0;                          // Capture bit 0, this becomes carry & new bit 7.
                 _state.A   = (byte)((_state.A >> 1) | (carry ? 0x80 : 0x00)); // Rotate A right circular.
@@ -419,7 +421,8 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
-            case 0x17:          // RLA
+            //--- RLA (Rotate Left through Accumulator)
+            case 0x17:
             {
                 bool oldCarry = _state.FlagC;                            // RLA Rotates left through carry:
                 bool carryOut = (_state.A & 0x80) != 0;                  // old carry -> bit 0, old bit 7 -> new carry.
@@ -433,7 +436,8 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 return;
             }
-            case 0x1F:          // RRA
+            //--- RRA (Rotate Right through Accumulator)
+            case 0x1F:
             {
                 bool oldCarry = _state.FlagC;                            // RLA Rotates right through carry:
                 bool carryOut = (_state.A & 0x01) != 0;                  // old carry -> bit 0, old bit 7 -> new carry.
@@ -449,7 +453,8 @@ public sealed class LR35902 : ICPU
             }
             
             //----------    FLOW    ----------//
-            case 0x18:          // JR r8
+            //--- JR r8
+            case 0x18:
             {
                 sbyte offset = unchecked((sbyte)ReadNextByte());
                 _state.PC = (ushort)(_state.PC + offset);
@@ -458,12 +463,13 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
+            //--- JR N',e8
             case 0x20:          // JR NZ,e8
             case 0x28:          // JR Z,e8
             case 0x30:          // JR NC,e8
             case 0x38:          // JR C,e8
             {
-                sbyte offset = unchecked((sbyte)ReadNextByte());
+                sbyte offset       = unchecked((sbyte)ReadNextByte());
                 ConditionCode cond = (ConditionCode)((opcode >> 3) & 0x03);
 
                 if (CheckCond(cond))
@@ -477,7 +483,8 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
-            case 0xC3:          // JP a16
+            //--- JP a16
+            case 0xC3:
             {
                 _state.PC = ReadNextWord();
                 
@@ -485,7 +492,8 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
-            case 0xC9:          // RET
+            //--- RET
+            case 0xC9:
             {
                 _state.PC = PopWord();
                 
@@ -493,7 +501,8 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
-            case 0xCD:          // CALL a16
+            //--- CALL a16
+            case 0xCD:
             {
                 ushort target = ReadNextWord();
                 
