@@ -462,6 +462,108 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)24, cpu.State.CycleCount); // 12 + 12
     }
 
+    [Fact] // Verifies DAA add-path adjusts 0x0A to BCD 0x10 after INC A.
+    public void Daa_AddPath_AdjustsLowNibbleOverflow()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07,       // RLCA -> clears carry
+            0x3E, 0x09, // LD A,0x09
+            0x3C,       // INC A -> 0x0A, N=0, H=0
+            0x27        // DAA
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x10, cpu.State.A);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.False(cpu.State.FlagZ);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 4 + 4
+    }
+
+    [Fact] // Verifies DAA add-path uses incoming carry and can roll to 0x00.
+    public void Daa_AddPath_WithCarry_AdjustsAndKeepsCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x9A, // LD A,0x9A (flags unchanged)
+            0x27        // DAA
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.True(cpu.State.FlagZ);
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 8 + 4 + 8 + 4
+    }
+
+    [Fact] // Verifies DAA sub-path with H set subtracts 0x06 correction.
+    public void Daa_SubPath_WithHalfBorrow_AdjustsDown()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07,       // RLCA -> clears carry
+            0x3E, 0x10, // LD A,0x10
+            0x3D,       // DEC A -> 0x0F, N=1, H=1
+            0x27        // DAA
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x09, cpu.State.A);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.False(cpu.State.FlagZ);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 4 + 4
+    }
+
+    [Fact] // Verifies DAA sub-path uses carry and half-borrow corrections together.
+    public void Daa_SubPath_WithCarryAndHalfBorrow_AdjustsToBcd()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x00, // LD A,0x00 (flags unchanged)
+            0x3D,       // DEC A -> 0xFF, N=1, H=1, C stays 1
+            0x27        // DAA -> 0x99
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x99, cpu.State.A);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.False(cpu.State.FlagZ);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 4 + 4
+    }
+
     [Fact] // Verifies LD B,d8 loads immediate data into B and updates timing/PC.
     public void LdB_d8_LoadsImmediateValueIntoB()
     {

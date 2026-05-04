@@ -54,7 +54,8 @@ public sealed class LR35902 : ICPU
             case 0x00: return;  // NOP
 
             //---------- CTRL ----------//
-            case 0x10:          // STOP
+            //--- STOP
+            case 0x10:
             {
                 _state.Stop();  // Enter stopped state until external wake event.
                 
@@ -64,7 +65,8 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
-            case 0x76:          // HALT
+            //--- HALT
+            case 0x76:
             {
                 _state.Halt();  // Enter halted state until interrupt-related wake event.
                 
@@ -282,6 +284,47 @@ public sealed class LR35902 : ICPU
                 if (target == 6)
                     _state.AddClockCycles(MachineCycle * 2);
                 
+                return;
+            }
+
+            //--- DAA
+            case 0x27:
+            {
+                // DAA adjusts A to a valid BCD result after ADD/ADC or SUB/SBC,
+                // using the current N/H/C flags to determine which corrections to apply.
+                byte a = _state.A; byte correction = 0;
+                bool n = _state.FlagN; bool h = _state.FlagH; bool c = _state.FlagC;
+
+                if (!n) // Addition correction
+                {
+                    if (h || (a & 0x0F) > 0x09) // If half-carry set or low nibble > 9
+                        correction |= 0x06;     // add 0x06.
+                    
+                    if (c || a > 0x99)          //  If carry set or A > 0x99
+                    {
+                        correction |= 0x60;     // add 0x60 and set carry.
+                        c = true;
+                    }
+
+                    a = (byte)(a + correction);
+                }
+                else    // Subtraction correction
+                {
+                    if (h) correction |= 0x06;  // If half-carry set, subtract 0x06.
+                    if (c) correction |= 0x60;  // If carry set, subtract 0x60.
+                    
+                    a = (byte)(a - correction);
+                }
+
+                _state.A = a;
+                SetFlagsZNHC(
+                    z: _state.A == 0,   // set if adjusted A is 0.
+                    n: n,               // unchanged.
+                    h: false,           // reset.
+                    c: c);              // unchanged.
+                
+                // Timing:  (4 total cycles)
+                //  - opcode fetch: 4 cycles.
                 return;
             }
 
