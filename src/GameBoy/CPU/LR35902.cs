@@ -57,7 +57,7 @@ public sealed class LR35902 : ICPU
             //--- LD rr,d16
             case 0x01: case 0x11: case 0x21: case 0x31:
             {
-                // Read the next 16-bits from bus; advances PC past both bytes.
+                // Read the next 16-bits from operand; advances PC past both bytes.
                 ushort val = ReadNextWord();
 
                 // bits 5-4 of these opcodes encode which 16-bit register pair to load:
@@ -76,7 +76,6 @@ public sealed class LR35902 : ICPU
                 _state.AddClockCycles(MachineCycle * 2);
                 return;
             }
-            
             //----------    ALU16    ----------//
             //--- INC rr
             case 0x03: case 0x13: case 0x23: case 0x33:
@@ -420,6 +419,23 @@ public sealed class LR35902 : ICPU
                 _state.A = ReadAtHL();
                 
                 _state.AddClockCycles(MachineCycle); // total 8
+                return;
+            }
+
+            //--- LD (a16),SP
+            case 0x08:
+            {
+                // Read the destination address from the immediate operand.
+                ushort dest = ReadNextWord();
+
+                // Store SP as little-endian at [a16] and [a16+1].
+                _bus.WriteByte(dest, (byte)(_state.SP & 0x00FF));
+                _bus.WriteByte((ushort)(dest + 1), (byte)(_state.SP >> 8));
+
+                // Timing: 20 total cycles.
+                // - opcode fetch already consumed 4 cycles.
+                // - LD (a16),SP consumes 16 more cycles.
+                _state.AddClockCycles(MachineCycle * 4);
                 return;
             }
             

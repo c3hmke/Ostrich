@@ -477,6 +477,23 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0104, cpu.State.PC);
         Assert.Equal((ulong)20, cpu.State.CycleCount); // 12 + 8
     }
+
+    [Fact] // Verifies LD (a16),SP writes SP as little-endian bytes to absolute address.
+    public void LdA16_Sp_WritesSpToAbsoluteAddressLittleEndian()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x31, 0x34, 0x12, // LD SP,0x1234
+            0x08, 0x00, 0xC0  // LD (0xC000),SP
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x34, bus.ReadByte(0xC000)); // low byte
+        Assert.Equal((byte)0x12, bus.ReadByte(0xC001)); // high byte
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 12 + 20
+    }
     
     [Fact] // Verifies LD (a16),A stores accumulator contents at an absolute address.
     public void LdA16_A_WritesAccumulatorToAbsoluteAddress()
