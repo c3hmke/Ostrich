@@ -192,6 +192,92 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)8, cpu.State.CycleCount);
     }
 
+    [Fact] // Verifies ADD HL,BC adds BC into HL and updates timing.
+    public void AddHl_Bc_AddsBcIntoHl()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x21, 0x34, 0x12, // LD HL,0x1234
+            0x01, 0x02, 0x01, // LD BC,0x0102
+            0x09              // ADD HL,BC
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x13, cpu.State.H);
+        Assert.Equal((byte)0x36, cpu.State.L);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 12 + 12 + 8
+    }
+
+    [Fact] // Verifies ADD HL,DE adds DE into HL and updates timing.
+    public void AddHl_De_AddsDeIntoHl()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x21, 0x00, 0x10, // LD HL,0x1000
+            0x11, 0x11, 0x01, // LD DE,0x0111
+            0x19              // ADD HL,DE
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x11, cpu.State.H);
+        Assert.Equal((byte)0x11, cpu.State.L);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 12 + 12 + 8
+    }
+
+    [Fact] // Verifies ADD HL,HL doubles HL and sets half-carry on bit-11 carry.
+    public void AddHl_Hl_HalfCarryEdge_SetsHalfCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x21, 0xFF, 0x0F, // LD HL,0x0FFF
+            0x29              // ADD HL,HL
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x1F, cpu.State.H);
+        Assert.Equal((byte)0xFE, cpu.State.L);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 12 + 8
+    }
+
+    [Fact] // Verifies ADD HL,SP sets carry on 16-bit overflow.
+    public void AddHl_Sp_CarryEdge_SetsCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x21, 0xFF, 0xFF, // LD HL,0xFFFF
+            0x31, 0x01, 0x00, // LD SP,0x0001
+            0x39              // ADD HL,SP
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.H);
+        Assert.Equal((byte)0x00, cpu.State.L);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 12 + 12 + 8
+    }
+
     [Fact] // Verifies INC C sets half-carry when low nibble overflows (0x0F -> 0x10).
     public void IncC_HalfCarryEdge_SetsHalfCarryFlag()
     {
