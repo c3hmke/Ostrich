@@ -564,6 +564,54 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 4 + 4
     }
 
+    [Fact] // Verifies CPL flips all bits in accumulator.
+    public void Cpl_ComplementsAccumulatorBits()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x3C, // LD A,0x3C
+            0x2F        // CPL
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xC3, cpu.State.A);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
+
+    [Fact] // Verifies CPL preserves Z/C and sets N/H.
+    public void Cpl_PreservesZAndC_SetsNAndH()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07,       // RLCA -> C=0 and Z=0 per RLCA behavior
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x00, // LD A,0x00
+            0x3C,       // INC A -> A=0x01, Z=0, C unchanged (=1)
+            0x3D,       // DEC A -> A=0x00, Z=1, C unchanged (=1)
+            0x2F        // CPL
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xFF, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);  // preserved
+        Assert.True(cpu.State.FlagC);  // preserved
+        Assert.True(cpu.State.FlagN);  // set
+        Assert.True(cpu.State.FlagH);  // set
+        Assert.Equal((ushort)0x010B, cpu.State.PC);
+        Assert.Equal((ulong)44, cpu.State.CycleCount); // 8+4+8+4+8+4+4+4+4
+    }
+
     [Fact] // Verifies LD B,d8 loads immediate data into B and updates timing/PC.
     public void LdB_d8_LoadsImmediateValueIntoB()
     {

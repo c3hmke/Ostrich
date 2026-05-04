@@ -287,7 +287,7 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
-            //--- DAA
+            //--- DAA (Decimal Adjust After)
             case 0x27:
             {
                 // DAA adjusts A to a valid BCD result after ADD/ADC or SUB/SBC,
@@ -322,6 +322,22 @@ public sealed class LR35902 : ICPU
                     n: n,               // unchanged.
                     h: false,           // reset.
                     c: c);              // unchanged.
+                
+                // Timing:  (4 total cycles)
+                //  - opcode fetch: 4 cycles.
+                return;
+            }
+            
+            //-- CPL (Complement Accumulator)
+            case 0x2F:
+            {
+                _state.A = (byte)~_state.A;  // Invert all bits in A (1's complement).
+                
+                SetFlagsZNHC(
+                    z: _state.FlagZ,    // unchanged.
+                    n: true,            // set.
+                    h: true,            // set.
+                    c: _state.FlagC);   // unchanged.
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
