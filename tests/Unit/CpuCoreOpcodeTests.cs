@@ -1,3 +1,5 @@
+// ReSharper disable UseUtf8StringLiteral; Use hex for byte codes.
+
 using Xunit;
 
 namespace Unit;
@@ -868,17 +870,8 @@ public sealed class CpuCoreOpcodeTests
     [InlineData(0x46, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x33, 0x33, 64UL)] // LD B,(HL)
     [InlineData(0x70, 0x99, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x99, 64UL)] // LD (HL),B
     public void LdMatrix_RepresentativeOpcodes_WorkAsExpected(
-        byte opcode,
-        byte bInit,
-        byte cInit,
-        byte dInit,
-        byte eInit,
-        byte hInit,
-        byte lInit,
-        byte aInit,
-        byte hlMemInit,
-        byte expectedHlMem,
-        ulong expectedCycles)
+        byte opcode, byte bInit, byte cInit, byte dInit, byte eInit, byte hInit,
+        byte lInit, byte aInit, byte hlMemInit, byte expectedHlMem, ulong expectedCycles)
     {
         var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
             0x06, bInit,       // LD B,d8
@@ -897,13 +890,13 @@ public sealed class CpuCoreOpcodeTests
         for (int i = 0; i < 8; i++)
             cpu.StepInstruction();
 
-        Assert.Equal((byte)((opcode == 0x46) ? hlMemInit : bInit), cpu.State.B);
-        Assert.Equal((byte)cInit, cpu.State.C);
-        Assert.Equal((byte)dInit, cpu.State.D);
-        Assert.Equal((byte)((opcode == 0x5D) ? lInit : eInit), cpu.State.E);
-        Assert.Equal((byte)hInit, cpu.State.H);
-        Assert.Equal((byte)((opcode == 0x6F) ? aInit : lInit), cpu.State.L);
-        Assert.Equal((byte)((opcode == 0x78) ? bInit : aInit), cpu.State.A);
+        Assert.Equal(((opcode == 0x46) ? hlMemInit : bInit), cpu.State.B);
+        Assert.Equal(cInit, cpu.State.C);
+        Assert.Equal(dInit, cpu.State.D);
+        Assert.Equal(((opcode == 0x5D) ? lInit : eInit), cpu.State.E);
+        Assert.Equal(hInit, cpu.State.H);
+        Assert.Equal(((opcode == 0x6F) ? aInit : lInit), cpu.State.L);
+        Assert.Equal(((opcode == 0x78) ? bInit : aInit), cpu.State.A);
 
         Assert.Equal(expectedHlMem, bus.ReadByte(hlAddr));
         Assert.Equal((ushort)0x010F, cpu.State.PC);
@@ -1017,6 +1010,137 @@ public sealed class CpuCoreOpcodeTests
         Assert.False(cpu.State.FlagC);
         Assert.Equal((ushort)0x0103, cpu.State.PC);
         Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
+
+    [Fact] // Verifies ADC A,B adds register operand when carry-in is clear.
+    public void AdcA_B_WithoutCarryIn_AddsRegisterOperand()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07,       // RLCA -> C=0
+            0x3E, 0x12, // LD A,0x12
+            0x06, 0x22, // LD B,0x22
+            0x88        // ADC A,B
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x34, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0108, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 8 + 4 + 8 + 8 + 4
+    }
+
+    [Fact] // Verifies ADC A,B consumes carry-in when carry flag is set.
+    public void AdcA_B_WithCarryIn_AddsCarryIn()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x12, // LD A,0x12
+            0x06, 0x22, // LD B,0x22
+            0x88        // ADC A,B
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x35, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0108, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 8 + 4 + 8 + 8 + 4
+    }
+
+    [Fact] // Verifies ADC A,E sets half-carry on nibble overflow with carry-in.
+    public void AdcA_E_HalfCarryEdge_SetsHalfCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x0F, // LD A,0x0F
+            0x1E, 0x00, // LD E,0x00
+            0x8B        // ADC A,E
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x10, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0108, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 8 + 4 + 8 + 8 + 4
+    }
+
+    [Fact] // Verifies ADC A,H sets carry and zero on 8-bit overflow with carry-in.
+    public void AdcA_H_CarryAndZeroEdge_SetsCarryAndZero()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0xFF, // LD A,0xFF
+            0x26, 0x00, // LD H,0x00
+            0x8C        // ADC A,H
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0108, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 8 + 4 + 8 + 8 + 4
+    }
+
+    [Fact] // Verifies ADC A,(HL) reads memory operand and uses 8-cycle ALU timing.
+    public void AdcA_Hl_ReadsMemoryOperandAndUsesEightCycleTiming()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x3E, 0x80,       // LD A,0x80
+            0x07,             // RLCA -> C=1
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x3E, 0x10,       // LD A,0x10
+            0x8E              // ADC A,(HL)
+        );
+        bus.WriteByte(0xC000, 0x22);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x33, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0109, cpu.State.PC);
+        Assert.Equal((ulong)40, cpu.State.CycleCount); // 8 + 4 + 12 + 8 + 8
     }
 
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
