@@ -47,6 +47,38 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal(cyclesAfterStop, cpu.State.CycleCount);
     }
 
+    [Fact] // Verifies HALT places CPU into halted execution state.
+    public void Halt_SetsHaltedState()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0x76);
+
+        cpu.StepInstruction();
+
+        Assert.True(cpu.State.Halted);
+        Assert.Equal((ushort)0x0101, cpu.State.PC);
+        Assert.Equal((ulong)4, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies CPU does not execute following instructions once HALT has been entered.
+    public void Halt_PreventsFurtherInstructionExecution()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x76, // HALT
+            0x00  // NOP (must not execute once halted)
+        );
+
+        cpu.StepInstruction();
+
+        ushort pcAfterHalt = cpu.State.PC;
+        ulong cyclesAfterHalt = cpu.State.CycleCount;
+
+        cpu.StepInstruction();
+
+        Assert.True(cpu.State.Halted);
+        Assert.Equal(pcAfterHalt, cpu.State.PC);
+        Assert.Equal(cyclesAfterHalt, cpu.State.CycleCount);
+    }
+
     [Fact] // Verifies LD BC,d16 writes a 16-bit immediate into BC.
     public void LdBc_d16_LoadsImmediateIntoBc()
     {

@@ -53,11 +53,24 @@ public sealed class LR35902 : ICPU
             //----------    MISC    ----------//
             case 0x00: return;  // NOP
 
+            //---------- CTRL ----------//
             case 0x10:          // STOP
             {
                 // STOP places the CPU into a stopped state until an external event.
                 // This emulator currently has no dedicated STOP state, so we map it
                 // to Halted as a temporary behavior-compatible approximation.
+                _state.Halted = true;
+                
+                // Timing:  (4 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - STOP is a 1-byte instruction in this simplified model.
+                return;
+            }
+
+            case 0x76:
+            {
+                // HALT stops CPU instruction execution until an interrupt-related wake event.
+                // In the current emulator model, we represent this with the shared Halted flag.
                 _state.Halted = true;
                 
                 // Timing:  (4 total cycles)
