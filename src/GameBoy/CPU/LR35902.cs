@@ -56,7 +56,7 @@ public sealed class LR35902 : ICPU
             //---------- CTRL ----------//
             case 0x10:          // STOP
             {
-                _state.Stopped = true;  // Enter stopped state until external wake event.
+                _state.Stop();  // Enter stopped state until external wake event.
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
@@ -66,7 +66,7 @@ public sealed class LR35902 : ICPU
 
             case 0x76:          // HALT
             {
-                _state.Halted = true;   // Enter halted state until interrupt-related wake event.
+                _state.Halt();  // Enter halted state until interrupt-related wake event.
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.

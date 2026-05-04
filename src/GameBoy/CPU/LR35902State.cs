@@ -14,8 +14,16 @@ public sealed class LR35902State : ICPUState
     public ushort PC         { get; internal set; } = 0x0100;   // Program Counter; Entry point
     public ushort SP         { get; internal set; } = 0xFFFE;   // Stack Pointer;   Top of HRAM
     public ulong  CycleCount { get; internal set; } = 0;        // Clock cycles (T-Cycles)
-    public bool   Halted     { get; internal set; } = false;    // Halts instruction exec until interrupt
-    public bool   Stopped    { get; internal set; } = false;    // CPU is stopped until external event
+    
+    //--------------------------------------------------------------------------------------------------//
+    //                                           EXECUTION                                              //
+    //--------------------------------------------------------------------------------------------------//
+    public bool   Halted     { get; private set; } = false;    // Halts instruction exec until interrupt
+    public bool   Stopped    { get; private set; } = false;    // CPU is stopped until external event
+
+    public void Halt()   { Halted = true;  Stopped = false; }
+    public void Stop()   { Halted = false; Stopped = true;  }
+    public void Resume() { Halted = false; Stopped = false; }
 
     //--------------------------------------------------------------------------------------------------//
     //                                           REGISTERS                                              //

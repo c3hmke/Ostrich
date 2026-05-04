@@ -94,6 +94,7 @@ public sealed class LR35902StateTests
         Assert.Equal((ushort)0xFFFE, state.SP);
         Assert.Equal((ulong)0, state.CycleCount);
         Assert.False(state.Halted);
+        Assert.False(state.Stopped);
 
         Assert.Equal((byte)0x00, state.A);
         Assert.Equal((byte)0x00, state.B);
@@ -103,5 +104,45 @@ public sealed class LR35902StateTests
         Assert.Equal((byte)0xB0, state.F);
         Assert.Equal((byte)0x00, state.H);
         Assert.Equal((byte)0x00, state.L);
+    }
+
+    [Fact] // Verifies Halt enters halted state and clears stopped state.
+    public void Halt_SetsHaltedAndClearsStopped()
+    {
+        var state = new LR35902State();
+
+        state.Stop();
+        state.Halt();
+
+        Assert.True(state.Halted);
+        Assert.False(state.Stopped);
+    }
+
+    [Fact] // Verifies Stop enters stopped state and clears halted state.
+    public void Stop_SetsStoppedAndClearsHalted()
+    {
+        var state = new LR35902State();
+
+        state.Halt();
+        state.Stop();
+
+        Assert.False(state.Halted);
+        Assert.True(state.Stopped);
+    }
+
+    [Fact] // Verifies Resume exits both halted and stopped states.
+    public void Resume_ClearsHaltedAndStopped()
+    {
+        var state = new LR35902State();
+
+        state.Halt();
+        state.Resume();
+        Assert.False(state.Halted);
+        Assert.False(state.Stopped);
+
+        state.Stop();
+        state.Resume();
+        Assert.False(state.Halted);
+        Assert.False(state.Stopped);
     }
 }

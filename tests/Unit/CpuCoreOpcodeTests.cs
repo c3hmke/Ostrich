@@ -15,14 +15,15 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)4, cpu.State.CycleCount);
     }
 
-    [Fact] // Verifies STOP places CPU into halted/stopped execution state.
-    public void Stop_SetsHaltedState()
+    [Fact] // Verifies STOP places CPU into stopped execution state.
+    public void Stop_SetsStoppedState()
     {
         var cpu = TestCpuFactory.CreateCpuWithProgram(0x10);
 
         cpu.StepInstruction();
 
-        Assert.True(cpu.State.Halted);
+        Assert.True(cpu.State.Stopped);
+        Assert.False(cpu.State.Halted);
         Assert.Equal((ushort)0x0101, cpu.State.PC);
         Assert.Equal((ulong)4, cpu.State.CycleCount);
     }
@@ -32,7 +33,7 @@ public sealed class CpuCoreOpcodeTests
     {
         var cpu = TestCpuFactory.CreateCpuWithProgram(
             0x10, // STOP
-            0x00  // NOP (must not execute once stopped/ halted)
+            0x00  // NOP (must not execute once stopped)
         );
 
         cpu.StepInstruction();
@@ -42,7 +43,8 @@ public sealed class CpuCoreOpcodeTests
 
         cpu.StepInstruction();
 
-        Assert.True(cpu.State.Halted);
+        Assert.True(cpu.State.Stopped);
+        Assert.False(cpu.State.Halted);
         Assert.Equal(pcAfterStop, cpu.State.PC);
         Assert.Equal(cyclesAfterStop, cpu.State.CycleCount);
     }
@@ -55,6 +57,7 @@ public sealed class CpuCoreOpcodeTests
         cpu.StepInstruction();
 
         Assert.True(cpu.State.Halted);
+        Assert.False(cpu.State.Stopped);
         Assert.Equal((ushort)0x0101, cpu.State.PC);
         Assert.Equal((ulong)4, cpu.State.CycleCount);
     }
@@ -75,6 +78,7 @@ public sealed class CpuCoreOpcodeTests
         cpu.StepInstruction();
 
         Assert.True(cpu.State.Halted);
+        Assert.False(cpu.State.Stopped);
         Assert.Equal(pcAfterHalt, cpu.State.PC);
         Assert.Equal(cyclesAfterHalt, cpu.State.CycleCount);
     }
