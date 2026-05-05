@@ -36,6 +36,24 @@ public sealed class CpuStackOpcodeTests
         Assert.Equal((ulong)40, cpu.State.CycleCount);
     }
 
+    [Fact] // Verifies RETI pops the return address from stack back into PC.
+    public void Reti_PopsAddressFromStack()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            programAtEntry: new byte[] { 0xCD, 0x34, 0x12 },
+            romPatches: new Dictionary<int, byte>
+            {
+                [0x1234] = 0xD9
+            });
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ushort)0xFFFE, cpu.State.SP);
+        Assert.Equal((ulong)40, cpu.State.CycleCount);
+    }
+
     [Fact] // Verifies RET NZ returns when Z flag is clear.
     public void RetNz_Taken_PopsAddressFromStack()
     {

@@ -743,6 +743,20 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
+            //--- RETI (Return from Interrup)
+            case 0xD9:
+            {
+                _state.PC = PopWord();  // Return from interrupt: pop return address into PC.
+
+                // TODO: set IME=true once interrupt controller/state is implemented.
+
+                // Timing:  (16 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - RETI:         12 cycles
+                _state.AddClockCycles(MachineCycle * 3);
+                return;
+            }
+
             //--- CALL a16
             case 0xCD:
             {
