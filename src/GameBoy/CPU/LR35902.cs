@@ -673,11 +673,20 @@ public sealed class LR35902 : ICPU
                 if (CheckCond(cond))
                 {
                     _state.PC = (ushort)(_state.PC + offset);
-                    _state.AddClockCycles(MachineCycle * 2); // taken: +8 (total 12)
+                    
+                    // Timing:  (12 total cycles)
+                    //  - opcode fetch: 4 cycles.
+                    //  - JR N',e8:     8 cycles
+                    _state.AddClockCycles(MachineCycle * 2);
                 }
                 else
-                    _state.AddClockCycles(MachineCycle);     // not taken: +4 (total 8)
-
+                {
+                    // Timing:  (12 total cycles)
+                    //  - opcode fetch:     4 cycles.
+                    //  - JR N',e8 no pop:  4 cycles
+                    _state.AddClockCycles(MachineCycle);
+                }
+                
                 return;
             }
             
@@ -686,7 +695,10 @@ public sealed class LR35902 : ICPU
             {
                 _state.PC = ReadNextWord();
                 
-                _state.AddClockCycles(MachineCycle * 3); // total 16
+                // Timing:  (16 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - JP a16:       12 cycles
+                _state.AddClockCycles(MachineCycle * 3);
                 return;
             }
 
@@ -703,15 +715,16 @@ public sealed class LR35902 : ICPU
                     // Condition met: pop return address into PC.
                     _state.PC = PopWord();
 
-                    // Timing: 20 total cycles.
-                    // - opcode fetch already consumed 4.
-                    // - taken RET cc consumes 16 more.
+                    // Timing:  (20 total cycles)
+                    //  - opcode fetch: 4 cycles.
+                    //  - RET cc:       16 cycles
                     _state.AddClockCycles(MachineCycle * 4);
                 }
                 else
                 {
-                    // Condition not met: no stack pop, just finish instruction.
-                    // Timing: 8 total cycles (fetch 4 + not-taken 4).
+                    // Timing:  (8 total cycles)
+                    //  - opcode fetch:  4 cycles.
+                    //  - RET cc no pop: 4 cycles
                     _state.AddClockCycles(MachineCycle);
                 }
 
@@ -723,6 +736,9 @@ public sealed class LR35902 : ICPU
             {
                 _state.PC = PopWord();
                 
+                // Timing:  (20 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - RET cc:       16 cycles
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
             }
