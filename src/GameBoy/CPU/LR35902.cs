@@ -307,20 +307,20 @@ public sealed class LR35902 : ICPU
             case 0x80: case 0x81: case 0x82: case 0x83:
             case 0x84: case 0x85: case 0x86: case 0x87:
             {
-                byte oldA = _state.A;
+                byte a = _state.A;
 
                 // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
                 int src = opcode & 0x07;
 
                 byte val  = ReadReg8(src);   // Read source operand (reg or memory at HL)
-                int  sum  = oldA + val;      // Perform addition with 8-bit wraparound.
+                int  sum  = a + val;         // Perform addition with 8-bit wraparound.
 
                 _state.A = (byte) sum;       // Store the result back in A.
                 SetFlagsZNHC(
-                    z: _state.A == 0,                               // set if carry is 0.
-                    n: false,                                       // reset.
-                    h: ((oldA & 0x0F) + (val & 0x0F)) > 0x0F,       // set if carry from bit 3 to bit 4.
-                    c: sum > 0xFF);                                 // set if carry out of bit 7.
+                    z: _state.A == 0,                            // set if carry is 0.
+                    n: false,                                    // reset.
+                    h: ((a & 0x0F) + (val & 0x0F)) > 0x0F,       // set if carry from bit 3 to bit 4.
+                    c: sum > 0xFF);                              // set if carry out of bit 7.
                 
                 // Timing:  (8 total cycles)
                 //  - opcode fetch: 4 cycles.
@@ -333,21 +333,21 @@ public sealed class LR35902 : ICPU
             case 0x88: case 0x89: case 0x8A: case 0x8B:
             case 0x8C: case 0x8D: case 0x8E: case 0x8F:
             {
-                byte oldA    = _state.A;
+                byte a = _state.A;
                 
                 // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
                 int src = opcode & 0x07;
 
                 byte val     = ReadReg8(src);           // Read source operand (reg or memory at HL)
                 int  carryIn = _state.FlagC ? 1 : 0;    // Carry-in is the current C flag.
-                int  sum     = oldA + val + carryIn;    // Perform the addition.
+                int  sum     = a + val + carryIn;       // Perform the addition.
                 
                 _state.A = (byte) sum;                  // Store the result back in A.
                 SetFlagsZNHC(
-                    z: _state.A == 0,                                   // set if carry is 0.
-                    n: false,                                           // reset.
-                    h: ((oldA & 0x0F) + (val & 0x0F) + carryIn) > 0x0F, // set if carry from bit 3.
-                    c: sum > 0xFF);                                     // set if carry from bit 7.
+                    z: _state.A == 0,                                // set if carry is 0.
+                    n: false,                                        // reset.
+                    h: ((a & 0x0F) + (val & 0x0F) + carryIn) > 0x0F, // set if carry from bit 3.
+                    c: sum > 0xFF);                                  // set if carry from bit 7.
                 
                 // Timing:  (8 total cycles)
                 //  - opcode fetch: 4 cycles.
@@ -360,20 +360,20 @@ public sealed class LR35902 : ICPU
             case 0x90: case 0x91: case 0x92: case 0x93:
             case 0x94: case 0x95: case 0x96: case 0x97:
             {
-                byte oldA    = _state.A;
+                byte a = _state.A;
 
                 // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
                 int src = opcode & 0x07;
                 
                 byte val  = ReadReg8(src);   // Read source operand (reg or memory at HL)
-                int  diff = oldA - val;      // Perform subtraction with 8-bit wraparound.
+                int  diff = a - val;         // Perform subtraction with 8-bit wraparound.
                 
                 _state.A = (byte) diff;      // Store the result back in A.
                 SetFlagsZNHC(
-                    z: _state.A == 0,                   // set if result is 0.
-                    n: true,                            // set.
-                    h: (oldA & 0x0F) < (val & 0x0F),    // set on half-borrow (borrow from bit 4)
-                    c: oldA < val);                     // set on full borrow (A < val)
+                    z: _state.A == 0,                // set if result is 0.
+                    n: true,                         // set.
+                    h: (a & 0x0F) < (val & 0x0F),    // set on half-borrow (borrow from bit 4)
+                    c: a < val);                     // set on full borrow (A < val)
                 
                 // Timing:  (8 total cycles)
                 //  - opcode fetch: 4 cycles.
@@ -386,21 +386,21 @@ public sealed class LR35902 : ICPU
             case 0x98: case 0x99: case 0x9A: case 0x9B:
             case 0x9C: case 0x9D: case 0x9E: case 0x9F:
             {
-                byte oldA    = _state.A;
+                byte a = _state.A;
                 
                 // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
                 int src = opcode & 0x07;
 
                 byte val     = ReadReg8(src);           // Read source operand (reg or memory at HL)
                 int  carryIn = _state.FlagC ? 1 : 0;    // Carry-in is the current C flag.
-                int  diff    = oldA - val - carryIn;    // Perform the subtraction.
+                int  diff    = a - val - carryIn;       // Perform the subtraction.
                 
                 _state.A = (byte) diff;                  // Store the result back in A.
                 SetFlagsZNHC(
-                    z: _state.A == 0,                               // set if result is 0.
-                    n: true,                                        // set.
-                    h: (oldA & 0x0F) < ((val & 0x0F) + carryIn),    // set on half-borrow (bit 4 borrow).
-                    c: oldA < (val + carryIn));                     // set on full borrow.
+                    z: _state.A == 0,                            // set if result is 0.
+                    n: true,                                     // set.
+                    h: (a & 0x0F) < ((val & 0x0F) + carryIn),    // set on half-borrow (bit 4 borrow).
+                    c: a < (val + carryIn));                     // set on full borrow.
                 
                 // Timing:  (8 total cycles)
                 //  - opcode fetch: 4 cycles.
@@ -480,7 +480,32 @@ public sealed class LR35902 : ICPU
                 if (src == 6) _state.AddClockCycles(MachineCycle);
                 return;
             }
-
+            
+            //--- CP A,r
+            case 0xB8: case 0xB9: case 0xBA: case 0xBB:
+            case 0xBC: case 0xBD: case 0xBE: case 0xBF:
+            {
+                byte a = _state.A;
+                
+                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
+                int src = opcode & 0x07;
+                
+                byte val = ReadReg8(src);           // Read source operand (register or memory at HL).
+                byte res = (byte)(a - val);         // Compare is a subtraction for flags only (A unchanged).
+                
+                SetFlagsZNHC(
+                    z: res == 0,                    // set if A == val (result zero)
+                    n: true,                        // set.
+                    h: (a & 0x0F) < (val & 0x0F),   // set on half-borrow.
+                    c: a < val);                    // set on full borrow.
+                
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - HL form only: 8 cycles.
+                if (src == 6) _state.AddClockCycles(MachineCycle);
+                return;
+            }
+                
             //--- DAA (Decimal Adjust After)
             case 0x27:
             {

@@ -1668,6 +1668,115 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
     }
 
+    [Fact] // Verifies CP A,B sets Z on equality and leaves A unchanged.
+    public void CpA_B_Equal_SetsZeroAndKeepsA()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x34, // LD A,0x34
+            0x06, 0x34, // LD B,0x34
+            0xB8        // CP A,B
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x34, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 8 + 4
+    }
+
+    [Fact] // Verifies CP A,E sets half-borrow on nibble borrow and leaves A unchanged.
+    public void CpA_E_HalfBorrowEdge_SetsHalfCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x10, // LD A,0x10
+            0x1E, 0x01, // LD E,0x01
+            0xBB        // CP A,E
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x10, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 8 + 4
+    }
+
+    [Fact] // Verifies CP A,H sets carry on full borrow and leaves A unchanged.
+    public void CpA_H_BorrowEdge_SetsCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x26, 0x01, // LD H,0x01
+            0xBC        // CP A,H
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 8 + 4
+    }
+
+    [Fact] // Verifies CP A,(HL) reads memory operand and uses 8-cycle ALU timing.
+    public void CpA_Hl_ReadsMemoryOperandAndUsesEightCycleTiming()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x3E, 0x34,       // LD A,0x34
+            0xBE              // CP A,(HL)
+        );
+        bus.WriteByte(0xC000, 0x12);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x34, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 12 + 8 + 8
+    }
+
+    [Fact] // Verifies CP A,A sets Z and leaves A unchanged.
+    public void CpA_A_SetsZeroAndKeepsA()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x5A, // LD A,0x5A
+            0xBF        // CP A,A
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x5A, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
+
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
     {
