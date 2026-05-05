@@ -1494,6 +1494,93 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
     }
 
+    [Fact] // Verifies XOR A,B computes bitwise XOR and updates flags.
+    public void XorA_B_ComputesBitwiseXor()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0xF0, // LD A,0xF0
+            0x06, 0x3C, // LD B,0x3C
+            0xA8        // XOR A,B
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xCC, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 8 + 4
+    }
+
+    [Fact] // Verifies XOR A,E can produce zero and sets Z flag.
+    public void XorA_E_ZeroEdge_SetsZeroFlag()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x5A, // LD A,0x5A
+            0x1E, 0x5A, // LD E,0x5A
+            0xAB        // XOR A,E
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 8 + 4
+    }
+
+    [Fact] // Verifies XOR A,(HL) reads memory operand and uses 8-cycle ALU timing.
+    public void XorA_Hl_ReadsMemoryOperandAndComputesXor()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x3E, 0xAA,       // LD A,0xAA
+            0xAE              // XOR A,(HL)
+        );
+        bus.WriteByte(0xC000, 0x0F);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xA5, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 12 + 8 + 8
+    }
+
+    [Fact] // Verifies XOR A,A produces zero and clears N/H/C.
+    public void XorA_A_ProducesZero()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x5A, // LD A,0x5A
+            0xAF        // XOR A,A
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
+
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
     {
