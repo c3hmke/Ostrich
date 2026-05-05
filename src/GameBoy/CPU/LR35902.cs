@@ -690,6 +690,34 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
+            //--- RET cc
+            case 0xC0:          // RET NZ
+            case 0xC8:          // RET Z
+            case 0xD0:          // RET NC
+            case 0xD8:          // RET C
+            {
+                ConditionCode cond = (ConditionCode)((opcode >> 3) & 0x03);
+
+                if (CheckCond(cond))
+                {
+                    // Condition met: pop return address into PC.
+                    _state.PC = PopWord();
+
+                    // Timing: 20 total cycles.
+                    // - opcode fetch already consumed 4.
+                    // - taken RET cc consumes 16 more.
+                    _state.AddClockCycles(MachineCycle * 4);
+                }
+                else
+                {
+                    // Condition not met: no stack pop, just finish instruction.
+                    // Timing: 8 total cycles (fetch 4 + not-taken 4).
+                    _state.AddClockCycles(MachineCycle);
+                }
+
+                return;
+            }
+
             //--- RET
             case 0xC9:
             {
