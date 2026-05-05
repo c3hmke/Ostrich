@@ -408,6 +408,30 @@ public sealed class LR35902 : ICPU
                 if (src == 6) _state.AddClockCycles(MachineCycle);
                 return;
             }
+            
+            //--- AND A,r
+            case 0xA0: case 0xA1: case 0xA2: case 0xA3:
+            case 0xA4: case 0xA5: case 0xA6: case 0xA7:
+            {
+                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
+                int src = opcode & 0x07;
+                
+                byte val = ReadReg8(src);           // Read source operand (register or memory at HL).
+                _state.A = (byte)(_state.A & val);  // Perform bitwise AND into A.
+                
+                SetFlagsZNHC(
+                    z: _state.A == 0,   // set if result is 0.
+                    n: false,           // reset.
+                    h: true,            // set.
+                    c: false            // reset.
+                );
+
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - HL form only: 8 cycles.
+                if (src == 6) _state.AddClockCycles(MachineCycle);
+                return;
+            }
 
             //--- DAA (Decimal Adjust After)
             case 0x27:
