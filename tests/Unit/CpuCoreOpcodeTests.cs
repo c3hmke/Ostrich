@@ -1580,6 +1580,93 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0103, cpu.State.PC);
         Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
     }
+    
+    [Fact] // Verifies OR A,B computes bitwise OR and updates flags.
+    public void OrA_B_ComputesBitwiseOr()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0xF0, // LD A,0xF0
+            0x06, 0x0F, // LD B,0x0F
+            0xB0        // OR A,B
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xFF, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 8 + 4
+    }
+
+    [Fact] // Verifies OR A,E can produce zero and sets Z flag.
+    public void OrA_E_ZeroEdge_SetsZeroFlag()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x1E, 0x00, // LD E,0x00
+            0xB3        // OR A,E
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 8 + 4
+    }
+
+    [Fact] // Verifies OR A,(HL) reads memory operand and uses 8-cycle ALU timing.
+    public void OrA_Hl_ReadsMemoryOperandAndComputesOr()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x21, 0x00, 0xC0, // LD HL,0xC000
+            0x3E, 0xA0,       // LD A,0xA0
+            0xB6              // OR A,(HL)
+        );
+        bus.WriteByte(0xC000, 0x0F);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xAF, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 12 + 8 + 8
+    }
+
+    [Fact] // Verifies OR A,A leaves A unchanged apart from flag updates.
+    public void OrA_A_LeavesAccumulatorValue()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x5A, // LD A,0x5A
+            0xB7        // OR A,A
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x5A, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
 
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
