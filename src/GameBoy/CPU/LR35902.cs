@@ -662,10 +662,8 @@ public sealed class LR35902 : ICPU
             }
             
             //--- JR N',e8
-            case 0x20:          // JR NZ,e8
-            case 0x28:          // JR Z,e8
-            case 0x30:          // JR NC,e8
-            case 0x38:          // JR C,e8
+            case 0x20:/*JR NZ,e8*/ case 0x28:/*JR Z,e8*/
+            case 0x30:/*JR NC,e8*/ case 0x38:/*JR C,e8*/
             {
                 sbyte offset       = unchecked((sbyte)ReadNextByte());
                 ConditionCode cond = (ConditionCode)((opcode >> 3) & 0x03);
@@ -703,10 +701,8 @@ public sealed class LR35902 : ICPU
             }
 
             //--- JP cc,a16
-            case 0xC2:          // JP NZ,a16
-            case 0xCA:          // JP Z,a16
-            case 0xD2:          // JP NC,a16
-            case 0xDA:          // JP C,a16
+            case 0xC2:/*NZ,a16*/ case 0xCA:/*Z,a16*/
+            case 0xD2:/*NC,a16*/ case 0xDA:/*C,a16*/
             {
                 ushort target    = ReadNextWord();
                 ConditionCode cc = (ConditionCode)((opcode >> 3) & 0x03);
@@ -732,10 +728,8 @@ public sealed class LR35902 : ICPU
             }
 
             //--- RET cc
-            case 0xC0:          // RET NZ
-            case 0xC8:          // RET Z
-            case 0xD0:          // RET NC
-            case 0xD8:          // RET C
+            case 0xC0:/*NZ,a16*/ case 0xC8:/*Z,a16*/
+            case 0xD0:/*NC,a16*/ case 0xD8:/*C,a16*/
             {
                 ConditionCode cond = (ConditionCode)((opcode >> 3) & 0x03);
 
@@ -787,10 +781,8 @@ public sealed class LR35902 : ICPU
             }
 
             //--- CALL cc,a16
-            case 0xC4:          // CALL NZ,a16
-            case 0xCC:          // CALL Z,a16
-            case 0xD4:          // CALL NC,a16
-            case 0xDC:          // CALL C,a16
+            case 0xC4:/*NZ,a16*/ case 0xCC:/*Z,a16*/
+            case 0xD4:/*NC,a16*/ case 0xDC:/*C,a16*/
             {
                 ushort target    = ReadNextWord();
                 ConditionCode cc = (ConditionCode)((opcode >> 3) & 0x03);
