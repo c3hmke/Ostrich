@@ -702,6 +702,35 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
+            //--- JP cc,a16
+            case 0xC2:          // JP NZ,a16
+            case 0xCA:          // JP Z,a16
+            case 0xD2:          // JP NC,a16
+            case 0xDA:          // JP C,a16
+            {
+                ushort target    = ReadNextWord();
+                ConditionCode cc = (ConditionCode)((opcode >> 3) & 0x03);
+
+                if (CheckCond(cc))
+                {
+                    _state.PC = target;
+
+                    // Timing:  (16 total cycles)
+                    //  - opcode fetch: 4 cycles.
+                    //  - JP cc,a16:   12 cycles
+                    _state.AddClockCycles(MachineCycle * 3);
+                }
+                else
+                {
+                    // Timing:  (12 total cycles)
+                    //  - opcode fetch:    4 cycles.
+                    //  - JP cc,a16 miss:  8 cycles
+                    _state.AddClockCycles(MachineCycle * 2);
+                }
+
+                return;
+            }
+
             //--- RET cc
             case 0xC0:          // RET NZ
             case 0xC8:          // RET Z

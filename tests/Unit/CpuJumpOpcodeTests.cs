@@ -80,4 +80,62 @@ public sealed class CpuJumpOpcodeTests
         Assert.Equal((ushort)0x1234, cpu.State.PC);
         Assert.Equal((ulong)16, cpu.State.CycleCount);
     }
+
+    [Fact] // Verifies JP NZ branches when zero flag is clear.
+    public void JpNz_a16_JumpsWhenZIsClear()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0xAF,             // XOR A,A -> Z=1
+            0x3E, 0x01,       // LD A,0x01
+            0xB7,             // OR A,A -> Z=0
+            0xC2, 0x34, 0x12  // JP NZ,0x1234
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x1234, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 4 + 8 + 4 + 16
+    }
+
+    [Fact] // Verifies JP NZ falls through when zero flag is set.
+    public void JpNz_a16_DoesNotJumpWhenZIsSet()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0xC2, 0x34, 0x12);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies JP C branches when carry flag is set.
+    public void JpC_a16_JumpsWhenCIsSet()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0xDA, 0x34, 0x12);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x1234, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies JP C falls through when carry flag is clear.
+    public void JpC_a16_DoesNotJumpWhenCIsClear()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00,       // LD A,0x00
+            0x07,             // RLCA -> C=0
+            0xDA, 0x34, 0x12  // JP C,0x1234
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 8 + 4 + 12
+    }
 }
