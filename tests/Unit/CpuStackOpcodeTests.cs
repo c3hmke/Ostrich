@@ -133,6 +133,78 @@ public sealed class CpuStackOpcodeTests
         Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 4 + 8
     }
 
+    [Fact] // Verifies CALL NZ branches when Z is clear and pushes return address.
+    public void CallNz_a16_Taken_PushesReturnAddressAndJumps()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0xAF,             // XOR A,A -> Z=1
+            0x3E, 0x01,       // LD A,0x01
+            0xB7,             // OR A,A -> Z=0
+            0xC4, 0x34, 0x12  // CALL NZ,0x1234
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x1234, cpu.State.PC);
+        Assert.Equal((ushort)0xFFFC, cpu.State.SP);
+        Assert.Equal((byte)0x07, bus.ReadByte(0xFFFC)); // low byte of return address (0x0107)
+        Assert.Equal((byte)0x01, bus.ReadByte(0xFFFD)); // high byte
+        Assert.Equal((ulong)40, cpu.State.CycleCount); // 4 + 8 + 4 + 24
+    }
+
+    [Fact] // Verifies CALL NZ falls through when Z is set.
+    public void CallNz_a16_NotTaken_DoesNotPushOrJump()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(0xC4, 0x34, 0x12);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ushort)0xFFFE, cpu.State.SP);
+        Assert.Equal((ulong)12, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies CALL C branches when carry is set and pushes return address.
+    public void CallC_a16_Taken_PushesReturnAddressAndJumps()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x3E, 0x80,       // LD A,0x80
+            0x07,             // RLCA -> C=1
+            0xDC, 0x34, 0x12  // CALL C,0x1234
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x1234, cpu.State.PC);
+        Assert.Equal((ushort)0xFFFC, cpu.State.SP);
+        Assert.Equal((byte)0x06, bus.ReadByte(0xFFFC)); // low byte of return address (0x0106)
+        Assert.Equal((byte)0x01, bus.ReadByte(0xFFFD)); // high byte
+        Assert.Equal((ulong)36, cpu.State.CycleCount); // 8 + 4 + 24
+    }
+
+    [Fact] // Verifies CALL C falls through when carry is clear.
+    public void CallC_a16_NotTaken_DoesNotPushOrJump()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00,       // LD A,0x00
+            0x07,             // RLCA -> C=0
+            0xDC, 0x34, 0x12  // CALL C,0x1234
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ushort)0xFFFE, cpu.State.SP);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 8 + 4 + 12
+    }
+
     [Fact] // Verifies PUSH BC stores BC on stack and decrements SP.
     public void PushBc_PushesWordFromBc()
     {

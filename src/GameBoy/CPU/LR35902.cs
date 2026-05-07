@@ -676,14 +676,14 @@ public sealed class LR35902 : ICPU
                     
                     // Timing:  (12 total cycles)
                     //  - opcode fetch: 4 cycles.
-                    //  - JR N',e8:     8 cycles
+                    //  - JR N',e8:     8 cycles.
                     _state.AddClockCycles(MachineCycle * 2);
                 }
                 else
                 {
                     // Timing:  (12 total cycles)
                     //  - opcode fetch:     4 cycles.
-                    //  - JR N',e8 no pop:  4 cycles
+                    //  - JR N',e8 no pop:  4 cycles.
                     _state.AddClockCycles(MachineCycle);
                 }
                 
@@ -697,7 +697,7 @@ public sealed class LR35902 : ICPU
                 
                 // Timing:  (16 total cycles)
                 //  - opcode fetch: 4 cycles.
-                //  - JP a16:       12 cycles
+                //  - JP a16:       12 cycles.
                 _state.AddClockCycles(MachineCycle * 3);
                 return;
             }
@@ -717,14 +717,14 @@ public sealed class LR35902 : ICPU
 
                     // Timing:  (16 total cycles)
                     //  - opcode fetch: 4 cycles.
-                    //  - JP cc,a16:   12 cycles
+                    //  - JP cc,a16:   12 cycles.
                     _state.AddClockCycles(MachineCycle * 3);
                 }
                 else
                 {
                     // Timing:  (12 total cycles)
                     //  - opcode fetch:    4 cycles.
-                    //  - JP cc,a16 miss:  8 cycles
+                    //  - JP cc,a16 miss:  8 cycles.
                     _state.AddClockCycles(MachineCycle * 2);
                 }
 
@@ -786,15 +786,49 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
+            //--- CALL cc,a16
+            case 0xC4:          // CALL NZ,a16
+            case 0xCC:          // CALL Z,a16
+            case 0xD4:          // CALL NC,a16
+            case 0xDC:          // CALL C,a16
+            {
+                ushort target    = ReadNextWord();
+                ConditionCode cc = (ConditionCode)((opcode >> 3) & 0x03);
+
+                if (CheckCond(cc))
+                {
+                    PushWord(_state.PC);    // Push return address.
+                    _state.PC = target;     // Jump to target.
+
+                    // Timing: 24 total cycles.
+                    // - opcode fetch: 4 cycles.
+                    // - CALL cc,a16:  20 cycles.
+                    _state.AddClockCycles(MachineCycle * 5);
+                }
+                else
+                {
+                    // Condition not met: no push, no jump.
+                    // Timing: 12 total cycles.
+                    // - opcode fetch:       4 cycles.
+                    // - CALL cc,a16 miss:   8 cycles.
+                    _state.AddClockCycles(MachineCycle * 2);
+                }
+
+                return;
+            }
+
             //--- CALL a16
             case 0xCD:
             {
                 ushort target = ReadNextWord();
                 
-                PushWord(_state.PC);
-                _state.PC = target;
+                PushWord(_state.PC);    // Push return address.
+                _state.PC = target;     // Jump to target.
                 
-                _state.AddClockCycles(MachineCycle * 5); // total 24
+                // Timing: 24 total cycles.
+                // - opcode fetch: 4 cycles.
+                // - CALL a16:     20 cycles.
+                _state.AddClockCycles(MachineCycle * 5);
                 return;
             }
             
