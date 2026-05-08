@@ -1777,6 +1777,162 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
     }
 
+    [Fact] // Verifies ADD A,d8 adds immediate operand into A.
+    public void AddA_d8_AddsImmediateOperand()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x12, // LD A,0x12
+            0xC6, 0x22  // ADD A,0x22
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x34, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies ADD A,d8 sets half-carry when low nibble overflows.
+    public void AddA_d8_HalfCarryEdge_SetsHalfCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x0F, // LD A,0x0F
+            0xC6, 0x01  // ADD A,0x01
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x10, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies ADD A,d8 sets carry and zero on 8-bit overflow.
+    public void AddA_d8_CarryAndZeroEdge_SetsCarryAndZero()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0xFF, // LD A,0xFF
+            0xC6, 0x01  // ADD A,0x01
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies ADC A,d8 adds immediate operand when carry-in is clear.
+    public void AdcA_d8_WithoutCarryIn_AddsImmediateOperand()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07,       // RLCA -> C=0
+            0x3E, 0x12, // LD A,0x12
+            0xCE, 0x22  // ADC A,0x22
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x34, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 8
+    }
+
+    [Fact] // Verifies ADC A,d8 consumes carry-in when carry flag is set.
+    public void AdcA_d8_WithCarryIn_AddsCarryIn()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x12, // LD A,0x12
+            0xCE, 0x22  // ADC A,0x22
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x35, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 8
+    }
+
+    [Fact] // Verifies ADC A,d8 sets half-carry on nibble overflow with carry-in.
+    public void AdcA_d8_HalfCarryEdge_SetsHalfCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x0F, // LD A,0x0F
+            0xCE, 0x00  // ADC A,0x00
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x10, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 8
+    }
+
+    [Fact] // Verifies ADC A,d8 sets carry and zero on 8-bit overflow with carry-in.
+    public void AdcA_d8_CarryAndZeroEdge_SetsCarryAndZero()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0xFF, // LD A,0xFF
+            0xCE, 0x00  // ADC A,0x00
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 8
+    }
+
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
     {

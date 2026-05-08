@@ -356,6 +356,29 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
+            //--- ADD/ADC A,d8
+            case 0xC6:/*ADD A,d8*/ case 0xCE:/*ADC A,d8*/
+            {
+                byte a = _state.A;
+                
+                byte val    = ReadNextByte();                           // Read immediate 8-bit operand from instruction stream.
+                int carryIn = (opcode == 0xCE && _state.FlagC) ? 1 : 0; // ADC includes carry-in from the current C flag; ADD does not.
+                int sum     = a + val + carryIn;                        // Perform addition with 8-bit wraparound.
+                
+                _state.A = (byte)sum;                                   // Store the result back in A.
+                SetFlagsZNHC(
+                    z: _state.A == 0,                                   // set if result is 0.
+                    n: false,                                           // reset.
+                    h: ((a & 0x0F) + (val & 0x0F) + carryIn) > 0x0F,    // set on half-carry.
+                    c: sum > 0xFF);                                     // set on full carry.
+
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - ADD/ADC A,d8: 4 cycles.
+                _state.AddClockCycles(MachineCycle);
+                return;
+            }
+            
             //--- SUB A,r
             case 0x90: case 0x91: case 0x92: case 0x93:
             case 0x94: case 0x95: case 0x96: case 0x97:
