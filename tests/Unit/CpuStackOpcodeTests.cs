@@ -304,4 +304,46 @@ public sealed class CpuStackOpcodeTests
         Assert.Equal((ushort)0x0105, cpu.State.PC);
         Assert.Equal((ulong)40, cpu.State.CycleCount); // 12 + 16 + 12
     }
+
+    [Fact] // Verifies RST 00h pushes return address and jumps to vector 0x0000.
+    public void Rst00_PushesReturnAddressAndJumpsTo0000()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0xC7);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0000, cpu.State.PC);
+        Assert.Equal((ushort)0xFFFC, cpu.State.SP);
+        Assert.Equal((byte)0x01, bus.ReadByte(0xFFFC)); // low byte of return address (0x0101)
+        Assert.Equal((byte)0x01, bus.ReadByte(0xFFFD)); // high byte
+        Assert.Equal((ulong)16, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies RST 20h pushes return address and jumps to vector 0x0020.
+    public void Rst20_PushesReturnAddressAndJumpsTo0020()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0xE7);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0020, cpu.State.PC);
+        Assert.Equal((ushort)0xFFFC, cpu.State.SP);
+        Assert.Equal((byte)0x01, bus.ReadByte(0xFFFC)); // low byte of return address (0x0101)
+        Assert.Equal((byte)0x01, bus.ReadByte(0xFFFD)); // high byte
+        Assert.Equal((ulong)16, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies RST 38h pushes return address and jumps to vector 0x0038.
+    public void Rst38_PushesReturnAddressAndJumpsTo0038()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0xFF);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0038, cpu.State.PC);
+        Assert.Equal((ushort)0xFFFC, cpu.State.SP);
+        Assert.Equal((byte)0x01, bus.ReadByte(0xFFFC)); // low byte of return address (0x0101)
+        Assert.Equal((byte)0x01, bus.ReadByte(0xFFFD)); // high byte
+        Assert.Equal((ulong)16, cpu.State.CycleCount);
+    }
 }

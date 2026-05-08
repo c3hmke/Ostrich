@@ -766,7 +766,7 @@ public sealed class LR35902 : ICPU
                 return;
             }
 
-            //--- RETI (Return from Interrup)
+            //--- RETI (Return from Interrupt)
             case 0xD9:
             {
                 _state.PC = PopWord();  // Return from interrupt: pop return address into PC.
@@ -775,11 +775,27 @@ public sealed class LR35902 : ICPU
 
                 // Timing:  (16 total cycles)
                 //  - opcode fetch: 4 cycles.
-                //  - RETI:         12 cycles
+                //  - RETI:         12 cycles.
                 _state.AddClockCycles(MachineCycle * 3);
                 return;
             }
-
+            
+            //--- RST vec (Call to a fixed vector)
+            case 0xC7: case 0xCF: case 0xD7: case 0xDF:
+            case 0xE7: case 0xEF: case 0xF7: case 0xFF:
+            {
+                ushort vec = (ushort)(opcode & 0x38);   // Compute vector from opcode.
+                
+                PushWord(_state.PC);                    // Store the return address.
+                _state.PC = vec;                        // Then jump to vector.
+                
+                // Timing:  (16 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - RST vec:      12 cycles.
+                _state.AddClockCycles(MachineCycle * 3);
+                return;
+            }
+            
             //--- CALL cc,a16
             case 0xC4:/*NZ,a16*/ case 0xCC:/*Z,a16*/
             case 0xD4:/*NC,a16*/ case 0xDC:/*C,a16*/
