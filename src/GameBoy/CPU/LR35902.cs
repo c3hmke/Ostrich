@@ -691,7 +691,7 @@ public sealed class LR35902 : ICPU
             //--- JP a16
             case 0xC3:
             {
-                _state.PC = ReadNextWord();
+                _state.PC = ReadNextWord(); // Jump to the next address in bitstream.
                 
                 // Timing:  (16 total cycles)
                 //  - opcode fetch: 4 cycles.
@@ -724,6 +724,16 @@ public sealed class LR35902 : ICPU
                     _state.AddClockCycles(MachineCycle * 2);
                 }
 
+                return;
+            }
+            
+            //--- JP HL
+            case 0xE9:
+            {
+                _state.PC = _state.HL;  // Jump to address currently in HL
+                
+                // Timing:  (4 total cycles)
+                //  - opcode fetch:    4 cycles.
                 return;
             }
 

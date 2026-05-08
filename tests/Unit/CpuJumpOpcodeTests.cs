@@ -138,4 +138,61 @@ public sealed class CpuJumpOpcodeTests
         Assert.Equal((ushort)0x0106, cpu.State.PC);
         Assert.Equal((ulong)24, cpu.State.CycleCount); // 8 + 4 + 12
     }
+
+    [Fact] // Verifies JP HL loads PC directly from the HL register pair.
+    public void JpHl_JumpsToAddressInHl()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x21, 0x23, 0xC1, // LD HL,0xC123
+            0xE9              // JP HL
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0xC123, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 12 + 4
+    }
+
+    [Fact] // Verifies JP HL does not modify any CPU flags.
+    public void JpHl_DoesNotModifyFlags()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x01,       // LD A,0x01
+            0x3D,             // DEC A -> Z=1, N=1
+            0x37,             // SCF   -> Z=1, N=0, H=0, C=1
+            0x21, 0x34, 0x12, // LD HL,0x1234
+            0xE9              // JP HL
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x1234, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 8 + 4 + 4 + 12 + 4
+    }
+
+    [Fact] // Verifies JP HL uses the latest HL value at execution time.
+    public void JpHl_UsesCurrentHlValue()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x21, 0x34, 0x12, // LD HL,0x1234
+            0x23,             // INC HL -> 0x1235
+            0xE9              // JP HL
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x1235, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 12 + 8 + 4
+    }
 }
