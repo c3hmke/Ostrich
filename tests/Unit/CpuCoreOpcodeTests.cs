@@ -1933,6 +1933,182 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 8
     }
 
+    [Fact] // Verifies SUB A,d8 subtracts immediate operand from A.
+    public void SubA_d8_SubtractsImmediateOperand()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x34, // LD A,0x34
+            0xD6, 0x12  // SUB A,0x12
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x22, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies SUB A,d8 sets half-borrow when low nibble borrows.
+    public void SubA_d8_HalfBorrowEdge_SetsHalfCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x10, // LD A,0x10
+            0xD6, 0x01  // SUB A,0x01
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x0F, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies SUB A,d8 sets carry on full borrow.
+    public void SubA_d8_BorrowEdge_SetsCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0xD6, 0x01  // SUB A,0x01
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xFF, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies SUB A,d8 sets zero on exact subtraction.
+    public void SubA_d8_ZeroEdge_SetsZero()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x22, // LD A,0x22
+            0xD6, 0x22  // SUB A,0x22
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies SBC A,d8 subtracts immediate operand when carry-in is clear.
+    public void SbcA_d8_WithoutCarryIn_SubtractsImmediateOperand()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0x07,       // RLCA -> C=0
+            0x3E, 0x34, // LD A,0x34
+            0xDE, 0x12  // SBC A,0x12
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x22, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 8
+    }
+
+    [Fact] // Verifies SBC A,d8 consumes carry-in during subtraction.
+    public void SbcA_d8_WithCarryIn_SubtractsCarryIn()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x34, // LD A,0x34
+            0xDE, 0x12  // SBC A,0x12
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x21, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 8
+    }
+
+    [Fact] // Verifies SBC A,d8 sets half-borrow on nibble borrow with carry-in.
+    public void SbcA_d8_HalfBorrowEdge_SetsHalfCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x10, // LD A,0x10
+            0xDE, 0x00  // SBC A,0x00
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x0F, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 8
+    }
+
+    [Fact] // Verifies SBC A,d8 can produce zero while consuming carry-in.
+    public void SbcA_d8_ZeroEdge_WithCarryIn_SetsZero()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x80, // LD A,0x80
+            0x07,       // RLCA -> C=1
+            0x3E, 0x23, // LD A,0x23
+            0xDE, 0x22  // SBC A,0x22
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 8 + 4 + 8 + 8
+    }
+
     [Fact] // Verifies LD A,d8 loads immediate data into A and updates timing/PC.
     public void LdA_d8_LoadsImmediateValueIntoA()
     {
