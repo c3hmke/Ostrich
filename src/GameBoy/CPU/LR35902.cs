@@ -455,7 +455,6 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
-            
             //--- AND A,r
             case 0xA0: case 0xA1: case 0xA2: case 0xA3:
             case 0xA4: case 0xA5: case 0xA6: case 0xA7:
@@ -479,6 +478,24 @@ public sealed class LR35902 : ICPU
                 if (src == 6) _state.AddClockCycles(MachineCycle);
                 return;
             }
+            //--- AND A,d8
+            case 0xE6:
+            {
+                // Perform a bitwise AND operation on reg A and the next byte. 
+                _state.A = (byte)(_state.A & ReadNextByte()); 
+                SetFlagsZNHC(
+                    z: _state.A == 0,           // set if result is 0.
+                    n: false,                   // reset.
+                    h: true,                    // set.
+                    c: false                    // reset.
+                );
+                
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - AND A,d8:     4 cycles.
+                _state.AddClockCycles(MachineCycle);
+                return;
+            }
             
             //--- XOR A,r
             case 0xA8: case 0xA9: case 0xAA: case 0xAB:
@@ -494,8 +511,7 @@ public sealed class LR35902 : ICPU
                     z: _state.A == 0,   // set if result is 0.
                     n: false,           // reset.
                     h: false,           // reset.
-                    c: false            // reset.
-                );
+                    c: false);          // reset.
                 
                 // Timing:  (8 total cycles)
                 //  - opcode fetch: 4 cycles.
@@ -503,6 +519,24 @@ public sealed class LR35902 : ICPU
                 if (src == 6) _state.AddClockCycles(MachineCycle);
                 return;
             }
+            //--- XOR A,d8
+            case 0xEE:
+            {
+                // Perform a bitwise XOR operation on reg A and the next byte. 
+                _state.A = (byte)(_state.A ^ ReadNextByte()); 
+                SetFlagsZNHC(
+                    z: _state.A == 0,           // set if result is 0.
+                    n: false,                   // reset.
+                    h: false,                   // reset.
+                    c: false);                  // reset.
+                
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - XOR A,d8:     4 cycles.
+                _state.AddClockCycles(MachineCycle);
+                return;
+            }
+            
             
             //--- OR A,r
             case 0xB0: case 0xB1: case 0xB2: case 0xB3:
@@ -525,6 +559,23 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
+                return;
+            }
+            //--- OR A,d8
+            case 0xF6:
+            {
+                // Perform a bitwise OR operation on reg A and the next byte. 
+                _state.A = (byte)(_state.A | ReadNextByte()); 
+                SetFlagsZNHC(
+                    z: _state.A == 0,           // set if result is 0.
+                    n: false,                   // reset.
+                    h: false,                   // reset.
+                    c: false);                  // reset.
+                
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - OR A,d8:      4 cycles.
+                _state.AddClockCycles(MachineCycle);
                 return;
             }
             
@@ -550,6 +601,26 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
+                return;
+            }
+            //--- CP A,d8
+            case 0xFE:
+            {
+                byte a   = _state.A;        // Value in register A.
+                byte val = ReadNextByte();  // Read next byte in stream.
+                
+                // Compare is a subtraction for flags only (A unchanged).
+                byte res = (byte)(_state.A - ReadNextByte());
+                SetFlagsZNHC(
+                    z: res == 0,                    // set if A == d8
+                    n: true,                        // set.
+                    h: (a & 0x0F) < (val & 0x0F),   // set on half-borrow.
+                    c: a < val);                    // set on full borrow.
+                
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - CP A,d8:      4 cycles.
+                _state.AddClockCycles(MachineCycle);
                 return;
             }
                 
