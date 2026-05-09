@@ -610,7 +610,7 @@ public sealed class LR35902 : ICPU
                 byte val = ReadNextByte();  // Read next byte in stream.
                 
                 // Compare is a subtraction for flags only (A unchanged).
-                byte res = (byte)(_state.A - ReadNextByte());
+                byte res = (byte)(a - val);
                 SetFlagsZNHC(
                     z: res == 0,                    // set if A == d8
                     n: true,                        // set.

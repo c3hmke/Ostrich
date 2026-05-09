@@ -1494,6 +1494,46 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
     }
 
+    [Fact] // Verifies AND A,d8 computes bitwise AND and updates flags.
+    public void AndA_d8_ComputesBitwiseAnd()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0xF0, // LD A,0xF0
+            0xE6, 0x3C  // AND A,0x3C
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x30, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies AND A,d8 can produce zero and sets Z while forcing H=1.
+    public void AndA_d8_ZeroEdge_SetsZeroFlag()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x0F, // LD A,0x0F
+            0xE6, 0xF0  // AND A,0xF0
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
     [Fact] // Verifies XOR A,B computes bitwise XOR and updates flags.
     public void XorA_B_ComputesBitwiseXor()
     {
@@ -1579,6 +1619,46 @@ public sealed class CpuCoreOpcodeTests
         Assert.False(cpu.State.FlagC);
         Assert.Equal((ushort)0x0103, cpu.State.PC);
         Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
+
+    [Fact] // Verifies XOR A,d8 computes bitwise XOR and updates flags.
+    public void XorA_d8_ComputesBitwiseXor()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0xF0, // LD A,0xF0
+            0xEE, 0x3C  // XOR A,0x3C
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xCC, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies XOR A,d8 can produce zero and sets Z flag.
+    public void XorA_d8_ZeroEdge_SetsZeroFlag()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x5A, // LD A,0x5A
+            0xEE, 0x5A  // XOR A,0x5A
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
     }
     
     [Fact] // Verifies OR A,B computes bitwise OR and updates flags.
@@ -1666,6 +1746,46 @@ public sealed class CpuCoreOpcodeTests
         Assert.False(cpu.State.FlagC);
         Assert.Equal((ushort)0x0103, cpu.State.PC);
         Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
+
+    [Fact] // Verifies OR A,d8 computes bitwise OR and updates flags.
+    public void OrA_d8_ComputesBitwiseOr()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0xF0, // LD A,0xF0
+            0xF6, 0x0F  // OR A,0x0F
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xFF, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies OR A,d8 can produce zero and sets Z flag.
+    public void OrA_d8_ZeroEdge_SetsZeroFlag()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0xF6, 0x00  // OR A,0x00
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.False(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
     }
 
     [Fact] // Verifies CP A,B sets Z on equality and leaves A unchanged.
@@ -1775,6 +1895,66 @@ public sealed class CpuCoreOpcodeTests
         Assert.False(cpu.State.FlagC);
         Assert.Equal((ushort)0x0103, cpu.State.PC);
         Assert.Equal((ulong)12, cpu.State.CycleCount); // 8 + 4
+    }
+
+    [Fact] // Verifies CP A,d8 sets Z on equality and leaves A unchanged.
+    public void CpA_d8_Equal_SetsZeroAndKeepsA()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x34, // LD A,0x34
+            0xFE, 0x34  // CP A,0x34
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x34, cpu.State.A);
+        Assert.True(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies CP A,d8 sets half-borrow on nibble borrow and leaves A unchanged.
+    public void CpA_d8_HalfBorrowEdge_SetsHalfCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x10, // LD A,0x10
+            0xFE, 0x01  // CP A,0x01
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x10, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies CP A,d8 sets carry on full borrow and leaves A unchanged.
+    public void CpA_d8_BorrowEdge_SetsCarry()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x00, // LD A,0x00
+            0xFE, 0x01  // CP A,0x01
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x00, cpu.State.A);
+        Assert.False(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
     }
 
     [Fact] // Verifies ADD A,d8 adds immediate operand into A.
