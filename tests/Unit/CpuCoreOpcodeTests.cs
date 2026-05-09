@@ -2387,6 +2387,64 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0106, cpu.State.PC);
         Assert.Equal((ulong)32, cpu.State.CycleCount); // 12 + 20
     }
+
+    [Fact] // Verifies LDH (a8),A stores accumulator in high-memory I/O space.
+    public void Ldh_a8_A_WritesAccumulatorToHighMemory()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x3E, 0x77, // LD A,0x77
+            0xE0, 0x80  // LDH (0x80),A -> [0xFF80]
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x77, bus.ReadByte(0xFF80));
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 12
+    }
+
+    [Fact] // Verifies LDH (a8),A uses 0xFF00 plus the immediate offset.
+    public void Ldh_a8_A_UsesHighMemoryOffsetAddress()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x3E, 0x66, // LD A,0x66
+            0xE0, 0x80  // LDH (0x80),A -> [0xFF80]
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x66, bus.ReadByte(0xFF80));
+        Assert.Equal((ushort)0x0104, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 12
+    }
+
+    [Fact] // Verifies LDH A,(a8) reads accumulator from high-memory I/O space.
+    public void Ldh_A_a8_ReadsAccumulatorFromHighMemory()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0xF0, 0x80);
+        bus.WriteByte(0xFF80, 0x5A);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x5A, cpu.State.A);
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies LDH A,(a8) uses 0xFF00 plus the immediate offset.
+    public void Ldh_A_a8_UsesHighMemoryOffsetAddress()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0xF0, 0x80);
+        bus.WriteByte(0xFF80, 0xA6);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xA6, cpu.State.A);
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)12, cpu.State.CycleCount);
+    }
     
     [Fact] // Verifies LD (a16),A stores accumulator contents at an absolute address.
     public void LdA16_A_WritesAccumulatorToAbsoluteAddress()
@@ -2400,6 +2458,19 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0105, cpu.State.PC);
         Assert.Equal((ulong)24, cpu.State.CycleCount);
     }
+
+    [Fact] // Verifies LD (a16),A reads the absolute address operand as little-endian.
+    public void LdA16_A_UsesLittleEndianAbsoluteAddress()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0x3E, 0x66, 0xEA, 0x34, 0xC1);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x66, bus.ReadByte(0xC134));
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount);
+    }
     
     [Fact] // Verifies LD A,(a16) reads a byte from absolute address into A.
     public void LdA_a16_ReadsAccumulatorFromAbsoluteAddress()
@@ -2410,6 +2481,19 @@ public sealed class CpuCoreOpcodeTests
         cpu.StepInstruction();
 
         Assert.Equal((byte)0x5A, cpu.State.A);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies LD A,(a16) reads the absolute address operand as little-endian.
+    public void LdA_a16_UsesLittleEndianAbsoluteAddress()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(0xFA, 0x34, 0xC1);
+        bus.WriteByte(0xC134, 0xA6);
+
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xA6, cpu.State.A);
         Assert.Equal((ushort)0x0103, cpu.State.PC);
         Assert.Equal((ulong)16, cpu.State.CycleCount);
     }
