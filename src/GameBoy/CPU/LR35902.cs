@@ -1082,25 +1082,44 @@ public sealed class LR35902 : ICPU
                 _bus.WriteByte(dest, (byte)(_state.SP & 0x00FF));
                 _bus.WriteByte((ushort)(dest + 1), (byte)(_state.SP >> 8));
 
-                // Timing: 20 total cycles.
-                // - opcode fetch already consumed 4 cycles.
-                // - LD (a16),SP consumes 16 more cycles.
+                // Timing:  (20 total)
+                //  - opcode fetch:  4 cycles.
+                //  - LD (a16),SP:   16 cycles.
                 _state.AddClockCycles(MachineCycle * 4);
                 return;
             }
             
-            case 0xEA:          // LD (a16),A
+            //--- LDH (a8),A | LDH A,(a8)
+            case 0xE0:/*LDH (a8),A*/ case 0xF0:/*LDH A,(a8)*/
             {
-                _bus.WriteByte(ReadNextWord(), _state.A);
-
-                _state.AddClockCycles(MachineCycle * 3); // total 16
+                byte offset = ReadNextByte();               // Read 8-bit offset from instruction stream.
+                ushort addr = (ushort)(0xFF00 + offset);    // LDH uses high-memory I/O space at 0xFF00 + a8.
+                
+                if (opcode == 0xE0)
+                    _bus.WriteByte(addr, _state.A);         // Store accumulator into high-memory I/O/register space.
+                else
+                    _state.A = _bus.ReadByte(addr);         // Load accumulator from high-memory I/O/register space.
+                
+                // Timing:  (12 total)
+                //  - opcode fetch:             4 cycles.
+                //  - LDH (a8),A | LDH A,(a8):  8 cycles.
+                _state.AddClockCycles(MachineCycle * 2);
                 return;
             }
-
-            case 0xFA:          // LD A,(a16)
+            
+            //--- LD (a16),A | LD A,(a16)
+            case 0xEA:/*LDH (a16),A*/ case 0xFA:/*LDH A,(a16)*/          
             {
-                _state.A = _bus.ReadByte(ReadNextWord());
+                ushort addr = ReadNextWord();         // Read full 16-bit address from instruction stream.
+                
+                if (opcode == 0xEA)
+                    _bus.WriteByte(addr, _state.A);   // Store accumulator at absolute address.
+                else
+                    _state.A = _bus.ReadByte(addr);   // Load accumulator from absolute address.
 
+                // Timing:  (12 total)
+                //  - opcode fetch:             4 cycles.
+                //  - LD (a16),A | LD A,(a16):  8 cycles.
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 return;
             }
