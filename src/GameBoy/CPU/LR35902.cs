@@ -292,7 +292,7 @@ public sealed class LR35902 : ICPU
                 bool carry  = _state.FlagC;     // INC affects Z, N, H and leaves C unchanged. Preserve carry.
                 SetFlagsZNHC(
                     z: result == 0,             // Z: Set if result is 0.
-                    n: true,                    // N: Set for dencrement.
+                    n: true,                    // N: Set for decrement.
                     h: (old & 0x0F) == 0X00,    // H: Set when low nibble overflowed
                     c: carry);                  // C: Unchanged
 
@@ -1104,6 +1104,23 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch:             4 cycles.
                 //  - LDH (a8),A | LDH A,(a8):  8 cycles.
                 _state.AddClockCycles(MachineCycle * 2);
+                return;
+            }
+            
+            //--- LD (C),A | LD A,(C)
+            case 0xE2:/*LD (C),A*/ case 0xF2:/*LD A,(C)*/
+            {
+                ushort addr = (ushort)(0xFF00 + _state.C);   // Uses high-memory I/O space addressed by register C.
+
+                if (opcode == 0xE2)
+                    _bus.WriteByte(addr, _state.A);          // Store accumulator into address 0xFF00 + C.
+                else
+                    _state.A = _bus.ReadByte(addr);          // Load accumulator from address 0xFF00 + C.
+
+                // Timing:  (8 total)
+                //  - opcode fetch:           4 cycles.
+                //  - LD (C),A | LD A,(C):    4 cycles.
+                _state.AddClockCycles(MachineCycle);
                 return;
             }
             
