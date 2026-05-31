@@ -51,6 +51,8 @@ public sealed class CpuStackOpcodeTests
 
         Assert.Equal((ushort)0x0103, cpu.State.PC);
         Assert.Equal((ushort)0xFFFE, cpu.State.SP);
+        Assert.True(cpu.State.InterruptMasterEnabled);
+        Assert.False(cpu.State.InterruptEnabledPending);
         Assert.Equal((ulong)40, cpu.State.CycleCount);
     }
 

@@ -85,6 +85,52 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal(cyclesAfterHalt, cpu.State.CycleCount);
     }
 
+    [Fact] // Verifies DI clears IME immediately and cancels any pending delayed enable.
+    public void Di_ClearsImeAndPendingEnableImmediately()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0xFB, // EI
+            0xF3  // DI
+        );
+
+        cpu.StepInstruction();
+
+        Assert.False(cpu.State.InterruptMasterEnabled);
+        Assert.True(cpu.State.InterruptEnabledPending);
+        Assert.Equal((ushort)0x0101, cpu.State.PC);
+        Assert.Equal((ulong)4, cpu.State.CycleCount);
+
+        cpu.StepInstruction();
+
+        Assert.False(cpu.State.InterruptMasterEnabled);
+        Assert.False(cpu.State.InterruptEnabledPending);
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)8, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies EI delays IME enable until after the following instruction completes.
+    public void Ei_EnablesImeAfterFollowingInstruction()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0xFB, // EI
+            0x00  // NOP
+        );
+
+        cpu.StepInstruction();
+
+        Assert.False(cpu.State.InterruptMasterEnabled);
+        Assert.True(cpu.State.InterruptEnabledPending);
+        Assert.Equal((ushort)0x0101, cpu.State.PC);
+        Assert.Equal((ulong)4, cpu.State.CycleCount);
+
+        cpu.StepInstruction();
+
+        Assert.True(cpu.State.InterruptMasterEnabled);
+        Assert.False(cpu.State.InterruptEnabledPending);
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((ulong)8, cpu.State.CycleCount);
+    }
+
     [Fact] // Verifies LD BC,d16 writes a 16-bit immediate into BC.
     public void LdBc_d16_LoadsImmediateIntoBc()
     {
