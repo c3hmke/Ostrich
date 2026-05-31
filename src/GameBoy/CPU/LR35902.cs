@@ -40,6 +40,9 @@ public sealed class LR35902 : ICPU
     {
         if (_bus is null || _state.Halted || _state.Stopped)
             return;
+        
+        // EI on previous instruction is applied only after the current instruction completes.
+        bool applyInterruptEnabledPending = _state.InterruptEnabledPending;
 
         // Read the Next opcode from the BUS (loaded from the cart)
         byte opcode = _bus.ReadByte(_state.PC);
@@ -1323,5 +1326,12 @@ public sealed class LR35902 : ICPU
             ConditionCode.C  =>  _state.FlagC,
             _ => throw new ArgumentOutOfRangeException(nameof(cond), cond, null)
         };
+    }
+    
+    /// <summary> Applies any delayed EI effect after the current instruction completes, then returns. </summary>
+    private void CompleteInstruction(bool applyPendingInterruptEnable)
+    {
+        if (applyPendingInterruptEnable)
+            _state.ApplyPendingInterruptEnable();
     }
 }
