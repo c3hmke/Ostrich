@@ -38,4 +38,47 @@ public sealed class CpuSpMathOpcodeTests
         Assert.Equal((ushort)0x0105, cpu.State.PC);
         Assert.Equal((ulong)24, cpu.State.CycleCount);
     }
+
+    [Fact] // Verifies LD SP,HL copies HL into SP and leaves HL unchanged.
+    public void LdSpHl_CopiesHlIntoSp()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x31, 0xF8, 0xFF, // LD SP,0xFFF8
+            0xF8, 0x08,       // LD HL,SP+0x08 -> HL=0x0000
+            0xF9              // LD SP,HL
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x0000, cpu.State.SP);
+        Assert.Equal((ushort)0x0000, (ushort)((cpu.State.H << 8) | cpu.State.L));
+        Assert.Equal((ushort)0x0106, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 12 + 12 + 8
+    }
+
+    [Fact] // Verifies LD SP,HL does not modify CPU flags.
+    public void LdSpHl_PreservesFlags()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x3E, 0x01,       // LD A,0x01
+            0x97,             // SUB A,A -> Z=1, N=1, H=0, C=0
+            0x21, 0x34, 0x12, // LD HL,0x1234
+            0xF9              // LD SP,HL
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((ushort)0x1234, cpu.State.SP);
+        Assert.True(cpu.State.FlagZ);
+        Assert.True(cpu.State.FlagN);
+        Assert.False(cpu.State.FlagH);
+        Assert.False(cpu.State.FlagC);
+        Assert.Equal((ushort)0x0107, cpu.State.PC);
+        Assert.Equal((ulong)32, cpu.State.CycleCount); // 8 + 4 + 12 + 8
+    }
 }

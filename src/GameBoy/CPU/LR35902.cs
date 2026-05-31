@@ -204,6 +204,18 @@ public sealed class LR35902 : ICPU
                 return;
             }
             
+            //--- LD SP,HL
+            case 0xF9:
+            {
+                _state.SP = _state.HL;   // Copy the 16-bit value in HL into SP.
+
+                // Timing:  (8 total cycles)
+                //  - opcode fetch: 4 cycles.
+                //  - LD SP,HL:     4 cycles.
+                _state.AddClockCycles(MachineCycle);
+                return;
+            }
+            
 
             //----------    LD8    ----------//
             //--- LD r,d8
