@@ -18,8 +18,10 @@ public sealed class LR35902State : ICPUState
     //--------------------------------------------------------------------------------------------------//
     //                                           EXECUTION                                              //
     //--------------------------------------------------------------------------------------------------//
-    public bool   Halted     { get; private set; } = false;    // Halts instruction exec until interrupt
-    public bool   Stopped    { get; private set; } = false;    // CPU is stopped until external event
+    public bool   Halted                  { get; private set; } // Halts instruction exec until interrupt
+    public bool   Stopped                 { get; private set; } // CPU is stopped until external event
+    public bool   InterruptMasterEnabled  { get; private set; } // IME flag controlling maskable interrupt servicing.
+    public bool   InterruptEnabledPending { get; private set; } // EI sets this first; IME becomes true after the following instruction.
 
     public void Halt()   { Halted = true;  Stopped = false; }
     public void Stop()   { Halted = false; Stopped = true;  }
@@ -102,6 +104,32 @@ public sealed class LR35902State : ICPUState
         CycleCount += cycles;
     }
     
+    public void DisableInterrupts()
+    {
+        InterruptMasterEnabled  = false;   // DI clears IME immediately.
+        InterruptEnabledPending = false;   // Any pending delayed enable is cancelled.
+    }
+
+    public void EnableInterrupts()
+    {
+        InterruptMasterEnabled  = true;    // Used by RETI or any direct IME enable path.
+        InterruptEnabledPending = false;   // No delayed enable remains once IME is active.
+    }
+
+    public void ScheduleInterruptEnable()
+    {
+        InterruptEnabledPending = true;    // EI does not set IME immediately on LR35902.
+    }
+
+    public void ApplyPendingInterruptEnable()
+    {
+        if (!InterruptEnabledPending)
+            return;
+
+        InterruptMasterEnabled  = true;    // Apply EI's delayed effect.
+        InterruptEnabledPending = false;   // Clear the latch once consumed.
+    }
+    
     public void SetFlags(bool z, bool n, bool h, bool c)
     {
         F = 0x00;
@@ -129,6 +157,8 @@ public sealed class LR35902State : ICPUState
     {
         CycleCount = 0; 
         Halted = Stopped = false;
+        InterruptMasterEnabled  = false;
+        InterruptEnabledPending = false;
         
         PC = 0x0100; SP = 0xFFFE;
 

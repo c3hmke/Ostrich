@@ -13,8 +13,10 @@ public interface ICPUState
     //--------------------------------------------------------------------------------------------------//
     //                                          Execution                                               //
     //--------------------------------------------------------------------------------------------------//
-    bool   Halted     { get; }
-    bool   Stopped    { get; }
+    bool   Halted                  { get; }
+    bool   Stopped                 { get; }
+    bool   InterruptMasterEnabled  { get; }
+    bool   InterruptEnabledPending { get; }
     
     //--------------------------------------------------------------------------------------------------//
     //                                          Registers                                               //
@@ -44,6 +46,10 @@ public interface ICPUState
     void Stop();                                    // Enter stopped state until external wake event.
     void Resume();                                  // Resumes CPU execution.
     void Reset();                                   // Reset all members on the CPUState.
+    void DisableInterrupts();                       // Clears IME immediately.
+    void EnableInterrupts();                        // Sets IME immediately.
+    void ScheduleInterruptEnable();                 // Schedules IME to be enabled after the following instruction.
+    void ApplyPendingInterruptEnable();             // Applies the delayed EI effect when appropriate.
     void SetFlags(bool z, bool n, bool h, bool c);  // Set flags on the CPUState.
 }
 

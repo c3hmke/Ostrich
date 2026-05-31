@@ -95,6 +95,8 @@ public sealed class LR35902StateTests
         Assert.Equal((ulong)0, state.CycleCount);
         Assert.False(state.Halted);
         Assert.False(state.Stopped);
+        Assert.False(state.InterruptMasterEnabled);
+        Assert.False(state.InterruptEnabledPending);
 
         Assert.Equal((byte)0x00, state.A);
         Assert.Equal((byte)0x00, state.B);
@@ -144,5 +146,54 @@ public sealed class LR35902StateTests
         state.Resume();
         Assert.False(state.Halted);
         Assert.False(state.Stopped);
+    }
+
+    [Fact] // Verifies DisableInterrupts clears both IME and any pending delayed enable.
+    public void DisableInterrupts_ClearsImeAndPending()
+    {
+        var state = new LR35902State();
+
+        state.ScheduleInterruptEnable();
+        state.EnableInterrupts();
+        state.ScheduleInterruptEnable();
+        state.DisableInterrupts();
+
+        Assert.False(state.InterruptMasterEnabled);
+        Assert.False(state.InterruptEnabledPending);
+    }
+
+    [Fact] // Verifies EnableInterrupts sets IME immediately and clears pending enable state.
+    public void EnableInterrupts_SetsImeAndClearsPending()
+    {
+        var state = new LR35902State();
+
+        state.ScheduleInterruptEnable();
+        state.EnableInterrupts();
+
+        Assert.True(state.InterruptMasterEnabled);
+        Assert.False(state.InterruptEnabledPending);
+    }
+
+    [Fact] // Verifies ScheduleInterruptEnable defers IME by setting only the pending latch.
+    public void ScheduleInterruptEnable_SetsPendingOnly()
+    {
+        var state = new LR35902State();
+
+        state.ScheduleInterruptEnable();
+
+        Assert.False(state.InterruptMasterEnabled);
+        Assert.True(state.InterruptEnabledPending);
+    }
+
+    [Fact] // Verifies ApplyPendingInterruptEnable promotes pending enable into active IME.
+    public void ApplyPendingInterruptEnable_PromotesPendingToIme()
+    {
+        var state = new LR35902State();
+
+        state.ScheduleInterruptEnable();
+        state.ApplyPendingInterruptEnable();
+
+        Assert.True(state.InterruptMasterEnabled);
+        Assert.False(state.InterruptEnabledPending);
     }
 }
