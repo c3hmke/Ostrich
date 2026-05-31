@@ -2445,6 +2445,76 @@ public sealed class CpuCoreOpcodeTests
         Assert.Equal((ushort)0x0102, cpu.State.PC);
         Assert.Equal((ulong)12, cpu.State.CycleCount);
     }
+
+    [Fact] // Verifies LD (C),A stores accumulator in high-memory I/O space addressed by register C.
+    public void Ld_C_A_WritesAccumulatorToHighMemoryAddressedByC()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x0E, 0x80, // LD C,0x80
+            0x3E, 0x77, // LD A,0x77
+            0xE2        // LD (C),A -> [0xFF80]
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x77, bus.ReadByte(0xFF80));
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 8 + 8 + 8
+    }
+
+    [Fact] // Verifies LD (C),A uses 0xFF00 plus register C as the destination address.
+    public void Ld_C_A_UsesHighMemoryOffsetFromRegisterC()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x0E, 0x9A, // LD C,0x9A
+            0x3E, 0x66, // LD A,0x66
+            0xE2        // LD (C),A -> [0xFF9A]
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x66, bus.ReadByte(0xFF9A));
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)24, cpu.State.CycleCount); // 8 + 8 + 8
+    }
+
+    [Fact] // Verifies LD A,(C) reads accumulator from high-memory I/O space addressed by register C.
+    public void Ld_A_C_ReadsAccumulatorFromHighMemoryAddressedByC()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x0E, 0x80, // LD C,0x80
+            0xF2        // LD A,(C) <- [0xFF80]
+        );
+        bus.WriteByte(0xFF80, 0x5A);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x5A, cpu.State.A);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
+
+    [Fact] // Verifies LD A,(C) uses 0xFF00 plus register C as the source address.
+    public void Ld_A_C_UsesHighMemoryOffsetFromRegisterC()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x0E, 0x9A, // LD C,0x9A
+            0xF2        // LD A,(C) <- [0xFF9A]
+        );
+        bus.WriteByte(0xFF9A, 0xA6);
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0xA6, cpu.State.A);
+        Assert.Equal((ushort)0x0103, cpu.State.PC);
+        Assert.Equal((ulong)16, cpu.State.CycleCount); // 8 + 8
+    }
     
     [Fact] // Verifies LD (a16),A stores accumulator contents at an absolute address.
     public void LdA16_A_WritesAccumulatorToAbsoluteAddress()
