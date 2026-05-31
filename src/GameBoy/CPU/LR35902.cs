@@ -75,6 +75,29 @@ public sealed class LR35902 : ICPU
                 //  - STOP is a 1-byte instruction in this simplified model.
                 return;
             }
+            
+            //--- DI (Disable Interrupts)
+            case 0xF3:
+            {
+                // Disable maskable interrupts.
+                // TODO: hook this up to the CPU interrupt master enable state once implemented.
+
+                // Timing:  (4 total cycles)
+                //  - opcode fetch: 4 cycles.
+                return;
+            }
+
+            //--- EI (Enable Interrupts)
+            case 0xFB:
+            {
+                // Enable maskable interrupts.
+                // TODO: hook this up to the CPU interrupt master enable state once implemented.
+                // Note: on real LR35902 hardware, EI takes effect after the following instruction.
+
+                // Timing:  (4 total cycles)
+                //  - opcode fetch: 4 cycles.
+                return;
+            }
 
             //----------    LD16    ----------//
             //--- LD rr,d16
