@@ -54,7 +54,9 @@ public sealed class LR35902 : ICPU
         switch (opcode)
         {
             //----------    MISC    ----------//
-            case 0x00: return;  // NOP
+            case 0x00:
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                return;  // NOP
 
             //---------- CTRL ----------//
             //--- STOP
@@ -65,6 +67,7 @@ public sealed class LR35902 : ICPU
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
                 //  - STOP is a 1-byte instruction in this simplified model.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -76,6 +79,7 @@ public sealed class LR35902 : ICPU
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
                 //  - STOP is a 1-byte instruction in this simplified model.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -122,6 +126,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD rr,d16:    8 cycles.
                 _state.AddClockCycles(MachineCycle * 2);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             //----------    ALU16    ----------//
@@ -143,6 +148,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - INC rr:       4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -164,6 +170,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - INC rr:       4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -194,6 +201,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - ADD HL,rr:    4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -210,6 +218,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - ADD SP,e8:    12 cycles.
                 _state.AddClockCycles(MachineCycle * 3);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -226,6 +235,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - ADD SP,e8:    12 cycles.
                 _state.AddClockCycles(MachineCycle * 2); // total 12
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -238,6 +248,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD SP,HL:     4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -262,6 +273,7 @@ public sealed class LR35902 : ICPU
                 //  - LD r,d8:      4 cycles.
                 //  - LD (HL),d8:   8 cycles.
                 _state.AddClockCycles((dest == 6) ? MachineCycle * 2 : MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -280,6 +292,7 @@ public sealed class LR35902 : ICPU
                 //  - r->r form:    0 cycles.
                 //  - HL forms:     4 cycles.
                 if (src == 6 || dst == 6) _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -310,6 +323,7 @@ public sealed class LR35902 : ICPU
                 //  - INC r,r8:     0 cycles
                 //  - INC r,HL:     8 cycles.
                 if (target == 6) _state.AddClockCycles(MachineCycle * 2);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -337,6 +351,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (target == 6) _state.AddClockCycles(MachineCycle * 2);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -363,6 +378,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -390,6 +406,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -413,6 +430,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - ADD/ADC A,d8: 4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -439,6 +457,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -466,6 +485,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -489,6 +509,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - SUB/SBC A,d8: 4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -513,6 +534,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             //--- AND A,d8
@@ -531,6 +553,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - AND A,d8:     4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -554,6 +577,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             //--- XOR A,d8
@@ -571,6 +595,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - XOR A,d8:     4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -596,6 +621,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             //--- OR A,d8
@@ -613,6 +639,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - OR A,d8:      4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -638,6 +665,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             //--- CP A,d8
@@ -658,6 +686,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - CP A,d8:      4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
                 
@@ -699,6 +728,7 @@ public sealed class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -715,6 +745,7 @@ public sealed class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -729,6 +760,7 @@ public sealed class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -743,6 +775,7 @@ public sealed class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -758,6 +791,7 @@ public sealed class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             //--- RRCA (Rotate Right Circular Accumulator)
@@ -771,6 +805,7 @@ public sealed class LR35902 : ICPU
 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -787,6 +822,7 @@ public sealed class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             //--- RRA (Rotate Right through Accumulator)
@@ -802,6 +838,7 @@ public sealed class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -813,6 +850,7 @@ public sealed class LR35902 : ICPU
                 _state.PC = (ushort)(_state.PC + offset);
                 
                 _state.AddClockCycles(MachineCycle * 2); // total 12
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -840,6 +878,7 @@ public sealed class LR35902 : ICPU
                     _state.AddClockCycles(MachineCycle);
                 }
                 
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -852,6 +891,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - JP a16:       12 cycles.
                 _state.AddClockCycles(MachineCycle * 3);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -879,6 +919,7 @@ public sealed class LR35902 : ICPU
                     _state.AddClockCycles(MachineCycle * 2);
                 }
 
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -889,6 +930,7 @@ public sealed class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch:    4 cycles.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -916,6 +958,7 @@ public sealed class LR35902 : ICPU
                     _state.AddClockCycles(MachineCycle);
                 }
 
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -928,6 +971,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - RET cc:       16 cycles
                 _state.AddClockCycles(MachineCycle * 3); // total 16
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -959,6 +1003,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - RST vec:      12 cycles.
                 _state.AddClockCycles(MachineCycle * 3);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -988,6 +1033,7 @@ public sealed class LR35902 : ICPU
                     _state.AddClockCycles(MachineCycle * 2);
                 }
 
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -1003,6 +1049,7 @@ public sealed class LR35902 : ICPU
                 // - opcode fetch: 4 cycles.
                 // - CALL a16:     20 cycles.
                 _state.AddClockCycles(MachineCycle * 5);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -1025,6 +1072,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - POP rr:       8 cycles
                 _state.AddClockCycles(MachineCycle * 2);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -1046,6 +1094,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - POP rr:       12 cycles
                 _state.AddClockCycles(MachineCycle * 3);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -1063,6 +1112,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD (BC/DE),A: 4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -1079,6 +1129,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD A,(BC/DE): 4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -1093,6 +1144,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD (HL+/-),A: 4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -1107,6 +1159,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD (HL+/-),A: 4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -1124,6 +1177,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch:  4 cycles.
                 //  - LD (a16),SP:   16 cycles.
                 _state.AddClockCycles(MachineCycle * 4);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -1142,6 +1196,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch:             4 cycles.
                 //  - LDH (a8),A | LDH A,(a8):  8 cycles.
                 _state.AddClockCycles(MachineCycle * 2);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -1159,6 +1214,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch:           4 cycles.
                 //  - LD (C),A | LD A,(C):    4 cycles.
                 _state.AddClockCycles(MachineCycle);
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
@@ -1176,6 +1232,7 @@ public sealed class LR35902 : ICPU
                 //  - opcode fetch:             4 cycles.
                 //  - LD (a16),A | LD A,(a16):  8 cycles.
                 _state.AddClockCycles(MachineCycle * 3); // total 16
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
