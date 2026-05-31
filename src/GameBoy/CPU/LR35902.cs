@@ -42,7 +42,7 @@ public sealed class LR35902 : ICPU
             return;
         
         // EI on previous instruction is applied only after the current instruction completes.
-        bool applyInterruptEnabledPending = _state.InterruptEnabledPending;
+        bool applyPendingInterruptEnableAfterInstruction = _state.InterruptEnabledPending;
 
         // Read the Next opcode from the BUS (loaded from the cart)
         byte opcode = _bus.ReadByte(_state.PC);
@@ -82,23 +82,22 @@ public sealed class LR35902 : ICPU
             //--- DI (Disable Interrupts)
             case 0xF3:
             {
-                // Disable maskable interrupts.
-                // TODO: hook this up to the CPU interrupt master enable state once implemented.
+                _state.DisableInterrupts();   // DI clears IME immediately and cancels any pending EI enable.
 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
             //--- EI (Enable Interrupts)
             case 0xFB:
             {
-                // Enable maskable interrupts.
-                // TODO: hook this up to the CPU interrupt master enable state once implemented.
-                // Note: on real LR35902 hardware, EI takes effect after the following instruction.
+                _state.ScheduleInterruptEnable(); // EI does not enable IME immediately on LR35902.
 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
 
@@ -935,14 +934,15 @@ public sealed class LR35902 : ICPU
             //--- RETI (Return from Interrupt)
             case 0xD9:
             {
-                _state.PC = PopWord();  // Return from interrupt: pop return address into PC.
-
-                // TODO: set IME=true once interrupt controller/state is implemented.
+                _state.PC = PopWord();      // Return from interrupt: pop return address into PC.
+                _state.EnableInterrupts();  // RETI re-enables IME immediately.
 
                 // Timing:  (16 total cycles)
                 //  - opcode fetch: 4 cycles.
                 //  - RETI:         12 cycles.
                 _state.AddClockCycles(MachineCycle * 3);
+                
+                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
             
