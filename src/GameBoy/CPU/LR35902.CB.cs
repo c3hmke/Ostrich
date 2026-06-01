@@ -163,7 +163,7 @@ public sealed partial class LR35902
             //--- BIT b,r
             case >= 0x40 and <= 0x7F:
             {
-                int bit  = group & 0x07;                            // Bits 5-3 encode which bit to test: 0..7.
+                int  bit = (opcode >> 3) & 0x07;                    // Bits 5-3 encode which bit to test: 0..7.
                 byte val = ReadReg8(target);                        // Read the current 8-bit operand.
                 bool set = (val & (1 << bit)) != 0;                 // Test whether the selected bit is set.
 
@@ -181,8 +181,8 @@ public sealed partial class LR35902
             //--- RES b,r
             case >= 0x80 and <= 0xBF:
             {
-                int bit    = group & 0x07;                          // Bits 5-3 encode which bit to clear: 0..7.
-                byte old   = ReadReg8(target);                      // Read the current 8-bit operand.
+                int  bit    = (opcode >> 3) & 0x07;                 // Bits 5-3 encode which bit to clear: 0..7.
+                byte old    = ReadReg8(target);                     // Read the current 8-bit operand.
                 byte result = (byte)(old & ~(1 << bit));            // Clear the selected bit.
 
                 WriteReg8(target, result);                          // Write modified result back to the same target.
@@ -196,8 +196,8 @@ public sealed partial class LR35902
             //--- SET b,r
             case >= 0xC0 and <= 0xFF:
             {
-                int bit    = group & 0x07;                          // Bits 5-3 encode which bit to set: 0..7.
-                byte old   = ReadReg8(target);                      // Read the current 8-bit operand.
+                int  bit    = (opcode >> 3) & 0x07;                 // Bits 5-3 encode which bit to set: 0..7.
+                byte old    = ReadReg8(target);                     // Read the current 8-bit operand.
                 byte result = (byte)(old | (1 << bit));             // Set the selected bit.
 
                 WriteReg8(target, result);                          // Write modified result back to the same target.

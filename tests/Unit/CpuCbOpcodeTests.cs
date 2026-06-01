@@ -105,4 +105,26 @@ public sealed class CpuCbOpcodeTests
         Assert.Equal((ushort)0x0105, cpu.State.PC);
         Assert.Equal((ulong)28, cpu.State.CycleCount); // 12 + 16
     }
+
+    [Fact] // Verifies CB BIT 7,B decodes the tested bit index from opcode bits 5-3.
+    public void CbBit7_B_TestsBitSevenRatherThanLowerBits()
+    {
+        var cpu = TestCpuFactory.CreateCpuWithProgram(
+            0x06, 0x80, // LD B,0x80
+            0x37,       // SCF -> carry should be preserved by BIT
+            0xCB, 0x78  // BIT 7,B
+        );
+
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+        cpu.StepInstruction();
+
+        Assert.Equal((byte)0x80, cpu.State.B); // BIT does not modify the operand.
+        Assert.False(cpu.State.FlagZ);         // Bit 7 is set, so Z must clear.
+        Assert.False(cpu.State.FlagN);
+        Assert.True(cpu.State.FlagH);
+        Assert.True(cpu.State.FlagC);          // BIT preserves carry.
+        Assert.Equal((ushort)0x0105, cpu.State.PC);
+        Assert.Equal((ulong)20, cpu.State.CycleCount); // 8 + 4 + 8
+    }
 }
