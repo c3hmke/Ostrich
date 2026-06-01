@@ -274,7 +274,7 @@ public sealed class CpuCbOpcodeTests
         Assert.True(cpu.State.FlagH);
         Assert.True(cpu.State.FlagC);
         Assert.Equal((ushort)0x0106, cpu.State.PC);
-        Assert.Equal((ulong)32, cpu.State.CycleCount); // 12 + 4 + 16
+        Assert.Equal((ulong)28, cpu.State.CycleCount); // 12 + 4 + 12
     }
 
     [Fact] // Verifies CB RES 7,B clears bit 7 selected from opcode bits 5-3.
