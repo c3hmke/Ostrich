@@ -7,5 +7,6 @@
     &lt;TestId&gt;xUnit::17BB42A7-4747-4C57-AC26-9104FF0C1B03::net10.0::Unit.CpuSpMathOpcodeTests&lt;/TestId&gt;
     &lt;TestId&gt;xUnit::17BB42A7-4747-4C57-AC26-9104FF0C1B03::net10.0::Unit.CpuStackOpcodeTests&lt;/TestId&gt;
     &lt;TestId&gt;xUnit::17BB42A7-4747-4C57-AC26-9104FF0C1B03::net10.0::Unit.LR35902StateTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::17BB42A7-4747-4C57-AC26-9104FF0C1B03::net10.0::Unit.CpuCbOpcodeTests&lt;/TestId&gt;
   &lt;/TestAncestor&gt;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
