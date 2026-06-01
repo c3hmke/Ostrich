@@ -62,8 +62,7 @@ public sealed partial class LR35902 : ICPU
         // Read the Next opcode from the BUS (loaded from the cart)
         byte opcode = _bus.ReadByte(_state.PC);
         
-        // Step the Program Counter then execute the opcode
-        _state.PC++; 
+        _state.StepPC();                     // Step the Program Counter then execute the opcode
         _state.AddClockCycles(MachineCycle); // fetch uses a machine cycle.
 
         switch (opcode)
@@ -98,7 +97,8 @@ public sealed partial class LR35902 : ICPU
             //--- HALT
             case 0x76:
             {
-                _state.Halt();  // Enter halted state until interrupt-related wake event.
+                bool interruptPending = GetPendingInterrupts() != 0;
+                _state.Halt(_state.InterruptMasterEnabled, interruptPending);
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.

@@ -108,13 +108,13 @@ public sealed class LR35902StateTests
         Assert.Equal((byte)0x00, state.L);
     }
 
-    [Fact] // Verifies Halt enters halted state and clears stopped state.
+    [Fact] // Verifies Halt enters halted state and clears stopped state when no HALT bug condition is present.
     public void Halt_SetsHaltedAndClearsStopped()
     {
         var state = new LR35902State();
 
         state.Stop();
-        state.Halt();
+        state.Halt(interruptMasterEnabled: false, interruptPending: false);
 
         Assert.True(state.Halted);
         Assert.False(state.Stopped);
@@ -125,7 +125,7 @@ public sealed class LR35902StateTests
     {
         var state = new LR35902State();
 
-        state.Halt();
+        state.Halt(interruptMasterEnabled: false, interruptPending: false);
         state.Stop();
 
         Assert.False(state.Halted);
@@ -137,7 +137,7 @@ public sealed class LR35902StateTests
     {
         var state = new LR35902State();
 
-        state.Halt();
+        state.Halt(interruptMasterEnabled: false, interruptPending: false);
         state.Resume();
         Assert.False(state.Halted);
         Assert.False(state.Stopped);
@@ -195,5 +195,17 @@ public sealed class LR35902StateTests
 
         Assert.True(state.InterruptMasterEnabled);
         Assert.False(state.InterruptEnabledPending);
+    }
+
+    [Fact] // Verifies Halt triggers the HALT bug instead of halting when IME is disabled and an interrupt is pending.
+    public void Halt_WithImeDisabledAndPendingInterrupt_TriggersHaltBug()
+    {
+        var state = new LR35902State();
+
+        state.Halt(interruptMasterEnabled: false, interruptPending: true);
+
+        Assert.False(state.Halted);
+        Assert.False(state.Stopped);
+        Assert.True(state.HaltBugActive);
     }
 }

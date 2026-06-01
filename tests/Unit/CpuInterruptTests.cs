@@ -4,6 +4,47 @@ namespace Unit;
 
 public sealed class CpuInterruptTests
 {
+    [Fact] // Verifies HALT triggers the HALT bug instead of entering halted state when IME is disabled and an interrupt is already pending.
+    public void Halt_WithImeDisabledAndPendingInterrupt_DoesNotEnterHaltedState()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x76, // HALT
+            0x00  // NOP
+        );
+
+        bus.WriteByte(0xFFFF, 0x01); // IE: VBlank enabled
+        bus.WriteByte(0xFF0F, 0x01); // IF: VBlank pending before HALT executes
+
+        cpu.StepInstruction();
+
+        Assert.False(cpu.State.Halted);
+        Assert.False(cpu.State.InterruptMasterEnabled);
+        Assert.Equal((ushort)0x0101, cpu.State.PC);
+        Assert.Equal((byte)0x01, bus.ReadByte(0xFF0F));
+        Assert.Equal((ulong)4, cpu.State.CycleCount);
+    }
+
+    [Fact] // Verifies the HALT bug suppresses the next opcode-fetch increment, causing the opcode byte to be re-read as immediate data.
+    public void HaltBug_ReusesOpcodeByteAsImmediateOperandOnNextInstruction()
+    {
+        var (cpu, bus) = TestCpuFactory.CreateCpuAndBusWithProgram(
+            0x76,       // HALT
+            0x06, 0x99, // LD B,0x99
+            0x00        // NOP
+        );
+
+        bus.WriteByte(0xFFFF, 0x01); // IE: VBlank enabled
+        bus.WriteByte(0xFF0F, 0x01); // IF: VBlank pending before HALT executes
+
+        cpu.StepInstruction(); // HALT triggers the bug instead of halting.
+        cpu.StepInstruction(); // LD B,d8 re-reads 0x06 as its own immediate.
+
+        Assert.Equal((byte)0x06, cpu.State.B);
+        Assert.Equal((ushort)0x0102, cpu.State.PC);
+        Assert.Equal((byte)0x01, bus.ReadByte(0xFF0F)); // Interrupt remains pending because IME is still clear.
+        Assert.Equal((ulong)12, cpu.State.CycleCount); // 4 + 8
+    }
+
     [Fact] // Verifies a pending enabled interrupt wakes HALT and services the highest-priority vector when IME is set.
     public void PendingInterrupt_WakesHaltAndServicesInterruptWhenImeEnabled()
     {

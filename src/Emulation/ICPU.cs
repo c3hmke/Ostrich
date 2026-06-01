@@ -42,15 +42,15 @@ public interface ICPUState
     //--------------------------------------------------------------------------------------------------//
     //                                         FUNCTIONS                                                //
     //--------------------------------------------------------------------------------------------------//
-    void Halt();                                    // Enter halted state until interrupt-related wake event.
-    void Stop();                                    // Enter stopped state until external wake event.
-    void Resume();                                  // Resumes CPU execution.
-    void Reset();                                   // Reset all members on the CPUState.
-    void DisableInterrupts();                       // Clears IME immediately.
-    void EnableInterrupts();                        // Sets IME immediately.
-    void ScheduleInterruptEnable();                 // Schedules IME to be enabled after the following instruction.
-    void ApplyPendingInterruptEnable();             // Applies the delayed EI effect when appropriate.
-    void SetFlags(bool z, bool n, bool h, bool c);  // Set flags on the CPUState.
+    void Halt(bool interruptMasterEnabled, bool interruptPending); // Enter HALT or trigger HALT bug based on interrupt state.
+    void Stop();                                                   // Enter stopped state until external wake event.
+    void Resume();                                                 // Resumes CPU execution.
+    void Reset();                                                  // Reset all members on the CPUState.
+    void DisableInterrupts();                                      // Clears IME immediately.
+    void EnableInterrupts();                                       // Sets IME immediately.
+    void ScheduleInterruptEnable();                                // Schedules IME to be enabled after the following instruction.
+    void ApplyPendingInterruptEnable();                            // Applies the delayed EI effect when appropriate.
+    void SetFlags(bool z, bool n, bool h, bool c);                 // Set flags on the CPUState.
 }
 
 /// <summary> Represents a CPU. </summary>

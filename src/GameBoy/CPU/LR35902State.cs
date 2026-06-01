@@ -11,22 +11,50 @@ public sealed class LR35902State : ICPUState
     //--------------------------------------------------------------------------------------------------//
     //                                           COUNTERS                                               //
     //--------------------------------------------------------------------------------------------------//
-    public ushort PC         { get; internal set; } = 0x0100;   // Program Counter; Entry point
-    public ushort SP         { get; internal set; } = 0xFFFE;   // Stack Pointer;   Top of HRAM
-    public ulong  CycleCount { get; internal set; } = 0;        // Clock cycles (T-Cycles)
+    public ushort PC         { get; internal set; } = 0x0100;   // Program Counter; Entry point.
+    public ushort SP         { get; internal set; } = 0xFFFE;   // Stack Pointer;   Top of HRAM.
+    public ulong  CycleCount { get; internal set; } = 0;        // Clock cycles (T-Cycles).
+
+    /// <summary> Step the Program Counter, incrementing it by 1. </summary>
+    public void StepPC()
+    {
+        // If the GB HALT bug is active, consume it by suppressing this one PC increment, otherwise increment
+        // normally. The bug is triggered by executing HALT with IME disabled while an interrupt is already
+        // pending, causing the next opcode fetch to re-read the current PC once instead of advancing first.
+        if (HaltBugActive)
+            HaltBugActive = false;
+        else
+            PC++;
+    }
     
     //--------------------------------------------------------------------------------------------------//
     //                                           EXECUTION                                              //
     //--------------------------------------------------------------------------------------------------//
-    public bool   Halted                  { get; private set; } // Halts instruction exec until interrupt
-    public bool   Stopped                 { get; private set; } // CPU is stopped until external event
+    public bool   Halted                  { get; private set; } // Halts instruction exec until interrupt.
+    public bool   Stopped                 { get; private set; } // CPU is stopped until external event.
+    public bool   HaltBugActive           { get; private set; } // Flag whether the GB HALT bug is active.
     public bool   InterruptMasterEnabled  { get; private set; } // IME flag controlling maskable interrupt servicing.
     public bool   InterruptEnabledPending { get; private set; } // EI sets this first; IME becomes true after the following instruction.
 
-    public void Halt()   { Halted = true;  Stopped = false; }
-    public void Stop()   { Halted = false; Stopped = true;  }
-    public void Resume() { Halted = false; Stopped = false; }
+    public void Stop()         { Halted = false; Stopped = true;  }
+    public void Resume()       { Halted = false; Stopped = false; }
 
+    /// <summary> Enter HALT or trigger HALT bug based on interrupt state. </summary>
+    public void Halt(bool interruptMasterEnabled, bool interruptPending)
+    {
+        // Trigger the halt bug if IME is disabled with an interrupt pending.
+        if (!interruptMasterEnabled && interruptPending)
+        {
+            Stopped       = false;
+            Halted        = false;   // HALT does not stick in this case.
+            HaltBugActive = true;    // Suppress the next PC increment once.
+            return;
+        }
+
+        Halted  = true;              // Normal HALT behavior.
+        Stopped = false;
+    }
+    
     //--------------------------------------------------------------------------------------------------//
     //                                           REGISTERS                                              //
     //--------------------------------------------------------------------------------------------------//
@@ -157,6 +185,7 @@ public sealed class LR35902State : ICPUState
     {
         CycleCount = 0; 
         Halted = Stopped = false;
+        HaltBugActive = false;
         InterruptMasterEnabled  = false;
         InterruptEnabledPending = false;
         
