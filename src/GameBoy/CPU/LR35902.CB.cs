@@ -6,7 +6,7 @@ public sealed partial class LR35902
     //                                        CB-PREFIXED OPCODES                                       //
     //--------------------------------------------------------------------------------------------------//
     /// <summary> Executes a CB-prefixed opcode read after the 0xCB prefix byte. </summary>
-    private void ExecuteCBOpcode(byte opcode, bool applyPendingInterruptEnableAfterInstruction)
+    private void ExecuteCBOpcode(byte opcode)
     {
         int target = opcode & 0x07;           // 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A
 
@@ -27,7 +27,7 @@ public sealed partial class LR35902
                     h: false,                                           // Reset.
                     c: carry);                                          // Set from old bit 7.
 
-                CompleteCBInstruction(opcode, target, applyPendingInterruptEnableAfterInstruction);
+                CompleteCBInstruction(opcode, target);
                 return;
             }
 
@@ -45,7 +45,7 @@ public sealed partial class LR35902
                     h: false,                                           // Reset.
                     c: carry);                                          // Set from old bit 0.
 
-                CompleteCBInstruction(opcode, target, applyPendingInterruptEnableAfterInstruction);
+                CompleteCBInstruction(opcode, target);
                 return;
             }
             
@@ -64,7 +64,7 @@ public sealed partial class LR35902
                     h: false,                                         // Reset.
                     c: carryOut);                                     // Set from old bit 7.
 
-                CompleteCBInstruction(opcode, target, applyPendingInterruptEnableAfterInstruction);
+                CompleteCBInstruction(opcode, target);
                 return;
             }
 
@@ -83,7 +83,7 @@ public sealed partial class LR35902
                     h: false,                                              // Reset.
                     c: carryOut);                                          // Set from old bit 0.
 
-                CompleteCBInstruction(opcode, target, applyPendingInterruptEnableAfterInstruction);
+                CompleteCBInstruction(opcode, target);
                 return;
             }
             
@@ -101,7 +101,7 @@ public sealed partial class LR35902
                     h: false,                                       // Reset.
                     c: carry);                                      // Set from old bit 7.
 
-                CompleteCBInstruction(opcode, target, applyPendingInterruptEnableAfterInstruction);
+                CompleteCBInstruction(opcode, target);
                 return;
             }
 
@@ -119,7 +119,7 @@ public sealed partial class LR35902
                     h: false,                                        // Reset.
                     c: carry);                                       // Set from old bit 0.
 
-                CompleteCBInstruction(opcode, target, applyPendingInterruptEnableAfterInstruction);
+                CompleteCBInstruction(opcode, target);
                 return;
             }
 
@@ -136,7 +136,7 @@ public sealed partial class LR35902
                     h: false,                                       // Reset.
                     c: false);                                      // Reset.
 
-                CompleteCBInstruction(opcode, target, applyPendingInterruptEnableAfterInstruction);
+                CompleteCBInstruction(opcode, target);
                 return;
             }
             
@@ -154,7 +154,7 @@ public sealed partial class LR35902
                     h: false,                                       // Reset.
                     c: carry);                                      // Set from old bit 0.
 
-                CompleteCBInstruction(opcode, target, applyPendingInterruptEnableAfterInstruction);
+                CompleteCBInstruction(opcode, target);
                 return;
             }
             
@@ -172,7 +172,7 @@ public sealed partial class LR35902
                     h: true,                                        // Set.
                     c: _state.FlagC);                               // Unchanged.
 
-                CompleteCBInstruction(opcode, target, applyPendingInterruptEnableAfterInstruction);
+                CompleteCBInstruction(opcode, target);
                 return;
             }
 
@@ -187,7 +187,7 @@ public sealed partial class LR35902
                 WriteReg8(target, result);                          // Write modified result back to the same target.
                                                                     // RES does not affect flags on LR35902.
 
-                CompleteCBInstruction(opcode, target, applyPendingInterruptEnableAfterInstruction);
+                CompleteCBInstruction(opcode, target);
                 return;
             }
 
@@ -202,14 +202,14 @@ public sealed partial class LR35902
                 WriteReg8(target, result);                          // Write modified result back to the same target.
                                                                     // SET does not affect flags on LR35902.
 
-                CompleteCBInstruction(opcode, target, applyPendingInterruptEnableAfterInstruction);
+                CompleteCBInstruction(opcode, target);
                 return;
             }
         }
         
     }
     
-    private void CompleteCBInstruction(byte opcode, int targetReg, bool applyPendingInterruptEnable)
+    private void CompleteCBInstruction(byte opcode, int targetReg)
     {
         // Timing:
         //  - register CB ops:   8 total cycles.
@@ -225,6 +225,6 @@ public sealed partial class LR35902
             _state.AddClockCycles(MachineCycle); // total 8
         }
 
-        CompleteInstruction(applyPendingInterruptEnable);
+        CompleteInstruction();
     }
 }

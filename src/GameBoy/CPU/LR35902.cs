@@ -25,6 +25,7 @@ public sealed partial class LR35902 : ICPU
     
     private readonly LR35902State _state = new();
     private          Bus?         _bus;
+    private          bool         _interruptEnabledPendingStateSnapshot;
     
     public ICPUState State => _state;
     
@@ -57,7 +58,8 @@ public sealed partial class LR35902 : ICPU
         if (_state.Halted || _state.Stopped) return;
         
         // EI on previous instruction is applied only after the current instruction completes.
-        bool applyPendingInterruptEnableAfterInstruction = _state.InterruptEnabledPending;
+        // Create a snapshot of the current InterruptEnabledPending state.
+        _interruptEnabledPendingStateSnapshot = _state.InterruptEnabledPending;
 
         // Read the Next opcode from the BUS (loaded from the cart)
         byte opcode = _bus.ReadByte(_state.PC);
@@ -68,16 +70,15 @@ public sealed partial class LR35902 : ICPU
         switch (opcode)
         {
             //----------    MISC    ----------//
+            //--- NOP
             case 0x00:
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
-                return;  // NOP
+                CompleteInstruction();              
+                return;  
             
             //--- PREFIX CB
             case 0xCB:
             {
-                byte cbOpcode = ReadNextByte();   // Read the CB-prefixed secondary opcode.
-                ExecuteCBOpcode(cbOpcode, applyPendingInterruptEnableAfterInstruction);
-                
+                ExecuteCBOpcode(ReadNextByte());    // Read the CB-prefixed secondary opcode.
                 return;
             }
 
@@ -90,7 +91,7 @@ public sealed partial class LR35902 : ICPU
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
                 //  - STOP is a 1-byte instruction in this simplified model.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -103,7 +104,7 @@ public sealed partial class LR35902 : ICPU
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
                 //  - STOP is a 1-byte instruction in this simplified model.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -114,7 +115,7 @@ public sealed partial class LR35902 : ICPU
 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -125,7 +126,7 @@ public sealed partial class LR35902 : ICPU
 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -150,7 +151,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD rr,d16:    8 cycles.
                 _state.AddClockCycles(MachineCycle * 2);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             //----------    ALU16    ----------//
@@ -172,7 +173,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - INC rr:       4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -194,7 +195,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - INC rr:       4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -225,7 +226,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - ADD HL,rr:    4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -242,7 +243,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - ADD SP,e8:    12 cycles.
                 _state.AddClockCycles(MachineCycle * 3);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -259,7 +260,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD HL,SP+e8:  8 cycles.
                 _state.AddClockCycles(MachineCycle * 2);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -272,7 +273,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD SP,HL:     4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -297,7 +298,7 @@ public sealed partial class LR35902 : ICPU
                 //  - LD r,d8:      4 cycles.
                 //  - LD (HL),d8:   8 cycles.
                 _state.AddClockCycles((dest == 6) ? MachineCycle * 2 : MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -316,7 +317,7 @@ public sealed partial class LR35902 : ICPU
                 //  - r->r form:    0 cycles.
                 //  - HL forms:     4 cycles.
                 if (src == 6 || dst == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -347,7 +348,7 @@ public sealed partial class LR35902 : ICPU
                 //  - INC r,r8:     0 cycles
                 //  - INC r,HL:     8 cycles.
                 if (target == 6) _state.AddClockCycles(MachineCycle * 2);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -375,7 +376,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (target == 6) _state.AddClockCycles(MachineCycle * 2);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -402,7 +403,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -430,7 +431,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -454,7 +455,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - ADD/ADC A,d8: 4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -481,7 +482,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -509,7 +510,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -533,7 +534,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - SUB/SBC A,d8: 4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -558,7 +559,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             //--- AND A,d8
@@ -577,7 +578,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - AND A,d8:     4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -601,7 +602,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             //--- XOR A,d8
@@ -619,7 +620,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - XOR A,d8:     4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -645,7 +646,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             //--- OR A,d8
@@ -663,7 +664,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - OR A,d8:      4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -689,7 +690,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - HL form only: 8 cycles.
                 if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             //--- CP A,d8
@@ -710,7 +711,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - CP A,d8:      4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
                 
@@ -752,7 +753,7 @@ public sealed partial class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -769,7 +770,7 @@ public sealed partial class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -784,7 +785,7 @@ public sealed partial class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -799,7 +800,7 @@ public sealed partial class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -815,7 +816,7 @@ public sealed partial class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             //--- RRCA (Rotate Right Circular Accumulator)
@@ -829,7 +830,7 @@ public sealed partial class LR35902 : ICPU
 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -846,7 +847,7 @@ public sealed partial class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             //--- RRA (Rotate Right through Accumulator)
@@ -862,7 +863,7 @@ public sealed partial class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch: 4 cycles.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -874,7 +875,7 @@ public sealed partial class LR35902 : ICPU
                 _state.PC = (ushort)(_state.PC + offset);
                 
                 _state.AddClockCycles(MachineCycle * 2); // total 12
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -902,7 +903,7 @@ public sealed partial class LR35902 : ICPU
                     _state.AddClockCycles(MachineCycle);
                 }
                 
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -915,7 +916,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - JP a16:       12 cycles.
                 _state.AddClockCycles(MachineCycle * 3);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -943,7 +944,7 @@ public sealed partial class LR35902 : ICPU
                     _state.AddClockCycles(MachineCycle * 2);
                 }
 
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -954,7 +955,7 @@ public sealed partial class LR35902 : ICPU
                 
                 // Timing:  (4 total cycles)
                 //  - opcode fetch:    4 cycles.
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -982,7 +983,7 @@ public sealed partial class LR35902 : ICPU
                     _state.AddClockCycles(MachineCycle);
                 }
 
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -995,7 +996,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - RET:          12 cycles
                 _state.AddClockCycles(MachineCycle * 3); // total 16
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -1010,7 +1011,7 @@ public sealed partial class LR35902 : ICPU
                 //  - RETI:         12 cycles.
                 _state.AddClockCycles(MachineCycle * 3);
                 
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -1027,7 +1028,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - RST vec:      12 cycles.
                 _state.AddClockCycles(MachineCycle * 3);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -1057,7 +1058,7 @@ public sealed partial class LR35902 : ICPU
                     _state.AddClockCycles(MachineCycle * 2);
                 }
 
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -1073,7 +1074,7 @@ public sealed partial class LR35902 : ICPU
                 // - opcode fetch: 4 cycles.
                 // - CALL a16:     20 cycles.
                 _state.AddClockCycles(MachineCycle * 5);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -1096,7 +1097,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - POP rr:       8 cycles
                 _state.AddClockCycles(MachineCycle * 2);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -1118,7 +1119,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - PUSH rr:      12 cycles
                 _state.AddClockCycles(MachineCycle * 3);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -1136,7 +1137,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD (BC/DE),A: 4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -1153,7 +1154,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD A,(BC/DE): 4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -1168,7 +1169,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD (HL+/-),A: 4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -1183,7 +1184,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch: 4 cycles.
                 //  - LD (HL+/-),A: 4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
 
@@ -1201,7 +1202,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch:  4 cycles.
                 //  - LD (a16),SP:   16 cycles.
                 _state.AddClockCycles(MachineCycle * 4);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -1220,7 +1221,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch:             4 cycles.
                 //  - LDH (a8),A | LDH A,(a8):  8 cycles.
                 _state.AddClockCycles(MachineCycle * 2);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -1238,7 +1239,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch:           4 cycles.
                 //  - LD (C),A | LD A,(C):    4 cycles.
                 _state.AddClockCycles(MachineCycle);
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -1256,7 +1257,7 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch:             4 cycles.
                 //  - LD (a16),A | LD A,(a16): 12 cycles.
                 _state.AddClockCycles(MachineCycle * 3); // total 16
-                CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
+                CompleteInstruction();
                 return;
             }
             
@@ -1485,11 +1486,11 @@ public sealed partial class LR35902 : ICPU
             _ => throw new ArgumentOutOfRangeException(nameof(cond), cond, null)
         };
     }
-    
+
     /// <summary> Applies any delayed EI effect after the current instruction completes, then returns. </summary>
-    private void CompleteInstruction(bool applyPendingInterruptEnable)
+    private void CompleteInstruction()
     {
-        if (applyPendingInterruptEnable)
+        if (_interruptEnabledPendingStateSnapshot)
             _state.ApplyPendingInterruptEnable();
     }
 }
