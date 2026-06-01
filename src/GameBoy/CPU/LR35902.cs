@@ -324,61 +324,12 @@ public sealed partial class LR35902 : ICPU
             
             //----------    ALU8    ----------//
             //--- INC r/(HL)
-            case 0x04: case 0x0C: case 0x14: case 0x1C:
-            case 0x24: case 0x2C: case 0x34: case 0x3C:
-            {
-                // Bits 5-3 of this opcode select the target register index:
-                // 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
-                int target = (opcode >> 3) & 0x07;
-                
-                byte old    = ReadReg8(target); // Read current 8-bit value from the selected source.
-                byte result = (byte)(old + 1);  // Perform 8-bit increment with wraparound (0xFF -> 0x00).
-                
-                WriteReg8(target, result);      // Write back to the same register
-                
-                bool carry  = _state.FlagC;     // INC affects Z, N, H and leaves C unchanged. Preserve carry.
-                SetFlagsZNHC(
-                    z: result == 0,             // Z: Set if result is 0.
-                    n: false,                   // N: Reset for increment.
-                    h: (old & 0x0F) == 0x0F,    // H: Set when low nibble overflowed
-                    c: carry);                  // C: Unchanged
-                
-                // Timing:  (4/12 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - INC r,r8:     0 cycles
-                //  - INC r,HL:     8 cycles.
-                if (target == 6) _state.AddClockCycles(MachineCycle * 2);
-                CompleteInstruction();
-                return;
-            }
+            case 0x04: case 0x0C: case 0x14: case 0x1C: case 0x24: case 0x2C: case 0x34: case 0x3C:
+                ExecuteIncRHl(opcode); return;
             
             //--- DEC r/(HL)
-            case 0x05: case 0x0D: case 0x15: case 0x1D:
-            case 0x25: case 0x2D: case 0x35: case 0x3D:
-            {
-                // Bits 5-3 of this opcode select the target register index:
-                // 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
-                int target = (opcode >> 3) & 0x07;
-                
-                byte old    = ReadReg8(target); // Read current 8-bit value from the selected source.
-                byte result = (byte)(old - 1);  // Perform 8-bit increment with wraparound (0x00 -> 0xFF).
-                
-                WriteReg8(target, result);      // Write back to the same register
-                
-                bool carry  = _state.FlagC;     // INC affects Z, N, H and leaves C unchanged. Preserve carry.
-                SetFlagsZNHC(
-                    z: result == 0,             // Z: Set if result is 0.
-                    n: true,                    // N: Set for decrement.
-                    h: (old & 0x0F) == 0X00,    // H: Set when low nibble overflowed
-                    c: carry);                  // C: Unchanged
-
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - HL form only: 8 cycles.
-                if (target == 6) _state.AddClockCycles(MachineCycle * 2);
-                CompleteInstruction();
-                return;
-            }
+            case 0x05: case 0x0D: case 0x15: case 0x1D: case 0x25: case 0x2D: case 0x35: case 0x3D:
+                ExecuteDecRHl(opcode); return;
             
             //--- ADD A,r
             case 0x80: case 0x81: case 0x82: case 0x83:
