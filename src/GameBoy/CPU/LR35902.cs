@@ -14,6 +14,15 @@ public sealed partial class LR35902 : ICPU
     // 1 DMG Machine Cycle equates to 4 clock cycles (or T-cycles) on the CPU.
     private const uint MachineCycle = 4;
     
+    // Interrupt codes for the CPU
+    private const ushort InterruptFlagAddress   = 0xFF0F;
+    private const ushort InterruptEnableAddress = 0xFFFF;
+    private const byte   InterruptVBlank        = 0x01;
+    private const byte   InterruptStat          = 0x02;
+    private const byte   InterruptTimer         = 0x04;
+    private const byte   InterruptSerial        = 0x08;
+    private const byte   InterruptJoypad        = 0x10;
+    
     private readonly LR35902State _state = new();
     private          Bus?         _bus;
     
@@ -38,8 +47,14 @@ public sealed partial class LR35902 : ICPU
     /// <summary> Step the next instruction and executes the opcode found at that instruction. </summary>
     public void StepInstruction()
     {
-        if (_bus is null || _state.Halted || _state.Stopped)
-            return;
+        if (_bus is null) return;   // nothing loaded so nothing to do
+        
+        // Interrupt wake/service is checked before normal opcode execution.
+        // HALT wakes when any enabled interrupt is pending. Interrupt servicing itself only occurs when IME is enabled.
+        if (HandleInterrupts()) return;
+        
+        // Don't step if state is halted or stopped.
+        if (_state.Halted || _state.Stopped) return;
         
         // EI on previous instruction is applied only after the current instruction completes.
         bool applyPendingInterruptEnableAfterInstruction = _state.InterruptEnabledPending;
@@ -1252,6 +1267,83 @@ public sealed partial class LR35902 : ICPU
     //--------------------------------------------------------------------------------------------------//
     //                                            HELPERS                                               //
     //--------------------------------------------------------------------------------------------------//
+    /// <summary>
+    /// Checks for pending enabled interrupts, waking HALT if needed and servicing one if IME is enabled.
+    /// Returns true when this CPU step was consumed by interrupt handling.
+    /// </summary>
+    private bool HandleInterrupts()
+    {
+        byte pending = GetPendingInterrupts();
+        
+        if (pending == 0)   return false;       // No pending interrupts, continue.
+        if (_state.Halted)  _state.Resume();    // HALT exits once an enabled interrupt is pending.
+        if (_state.Stopped) return false;       // STOP wake remains simplified for now.
+        
+        if (!_state.InterruptMasterEnabled)
+            return false;                       // Interrupt is pending, but IME still blocks servicing.
+
+        ServiceInterrupt(pending);
+        return true;
+    }
+    
+    /// <summary>
+    /// Services the highest-priority pending interrupt, clears its IF bit, disables IME, and jumps to its vector.
+    /// </summary>
+    private void ServiceInterrupt(byte pendingInterrupts)
+    {
+        if (_bus is null) return;
+
+        byte   interruptMask;
+        ushort vector;
+
+        if ((pendingInterrupts & InterruptVBlank) != 0)
+        {
+            interruptMask = InterruptVBlank;
+            vector = 0x0040;
+        }
+        else if ((pendingInterrupts & InterruptStat) != 0)
+        {
+            interruptMask = InterruptStat;
+            vector = 0x0048;
+        }
+        else if ((pendingInterrupts & InterruptTimer) != 0)
+        {
+            interruptMask = InterruptTimer;
+            vector = 0x0050;
+        }
+        else if ((pendingInterrupts & InterruptSerial) != 0)
+        {
+            interruptMask = InterruptSerial;
+            vector = 0x0058;
+        }
+        else
+        {
+            interruptMask = InterruptJoypad;
+            vector = 0x0060;
+        }
+
+        byte interruptFlags = _bus.ReadByte(InterruptFlagAddress);
+        _bus.WriteByte(InterruptFlagAddress, (byte)(interruptFlags & ~interruptMask)); // Acknowledge chosen interrupt.
+
+        _state.DisableInterrupts();   // Servicing an interrupt clears IME immediately.
+        PushWord(_state.PC);          // Save current PC so RETI can resume execution.
+        _state.PC = vector;           // Jump to interrupt handler vector.
+
+        // Timing: 20 total cycles.
+        // - interrupt entry behaves like a call to the vector.
+        _state.AddClockCycles(MachineCycle * 5);
+    }
+    
+    /// <summary> Computes IF & IE to determine which enabled interrupts are currently pending. </summary>
+    private byte GetPendingInterrupts()
+    {
+        if (_bus is null) return 0;
+
+        byte interruptFlags  = _bus.ReadByte(InterruptFlagAddress);
+        byte interruptEnable = _bus.ReadByte(InterruptEnableAddress);
+        return (byte)(interruptFlags & interruptEnable & 0x1F);
+    }
+    
     /// <summary> Reads the next word from the instruction stream; advances the PC. </summary>
     private byte ReadNextByte()
     {
