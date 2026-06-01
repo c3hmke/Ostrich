@@ -240,10 +240,10 @@ public sealed partial class LR35902 : ICPU
                 
                 // Uses same flag behavior as ADD SP,e8 via shared helper.
 
-                // Timing:  (16 total cycles)
+                // Timing:  (12 total cycles)
                 //  - opcode fetch: 4 cycles.
-                //  - ADD SP,e8:    12 cycles.
-                _state.AddClockCycles(MachineCycle * 2); // total 12
+                //  - LD HL,SP+e8:  8 cycles.
+                _state.AddClockCycles(MachineCycle * 2);
                 CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
             }
@@ -976,9 +976,9 @@ public sealed partial class LR35902 : ICPU
             {
                 _state.PC = PopWord();
                 
-                // Timing:  (20 total cycles)
+                // Timing:  (16 total cycles)
                 //  - opcode fetch: 4 cycles.
-                //  - RET cc:       16 cycles
+                //  - RET:          12 cycles
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
@@ -1101,7 +1101,7 @@ public sealed partial class LR35902 : ICPU
                 
                 // Timing:  (16 total cycles)
                 //  - opcode fetch: 4 cycles.
-                //  - POP rr:       12 cycles
+                //  - PUSH rr:      12 cycles
                 _state.AddClockCycles(MachineCycle * 3);
                 CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
@@ -1125,7 +1125,7 @@ public sealed partial class LR35902 : ICPU
                 return;
             }
             
-            //--- LD (BC/DE),A
+            //--- LD A,(BC/DE)
             case 0x0A: case 0x1A:
             {
                 // Select the source address from BC/DE based on opcode.
@@ -1237,9 +1237,9 @@ public sealed partial class LR35902 : ICPU
                 else
                     _state.A = _bus.ReadByte(addr);   // Load accumulator from absolute address.
 
-                // Timing:  (12 total)
+                // Timing:  (16 total)
                 //  - opcode fetch:             4 cycles.
-                //  - LD (a16),A | LD A,(a16):  8 cycles.
+                //  - LD (a16),A | LD A,(a16): 12 cycles.
                 _state.AddClockCycles(MachineCycle * 3); // total 16
                 CompleteInstruction(applyPendingInterruptEnableAfterInstruction);
                 return;
