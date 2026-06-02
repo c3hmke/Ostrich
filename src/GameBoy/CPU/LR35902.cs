@@ -72,15 +72,11 @@ public sealed partial class LR35902 : ICPU
             //----------    MISC    ----------//
             //--- NOP
             case 0x00:
-                CompleteInstruction();              
-                return;  
+                CompleteInstruction(); return;  
             
             //--- PREFIX CB
             case 0xCB:
-            {
-                ExecuteCBOpcode(ReadNextByte());    // Read the CB-prefixed secondary opcode.
-                return;
-            }
+                ExecuteCBOpcode(ReadNextByte()); return;
 
             //---------- CTRL ----------//
             //--- STOP
@@ -320,440 +316,61 @@ public sealed partial class LR35902 : ICPU
                 CompleteInstruction();
                 return;
             }
-
             
-            //----------    ALU8    ----------//
-            //--- INC r/(HL)
-            case 0x04: case 0x0C: case 0x14: case 0x1C: case 0x24: case 0x2C: case 0x34: case 0x3C:
+            //------------------------    ALU8    ------------------------//
+            case 0x04: case 0x0C: case 0x14: case 0x1C:     //- INC r/(HL)
+            case 0x24: case 0x2C: case 0x34: case 0x3C:
                 ExecuteIncRHl(opcode); return;
-            
-            //--- DEC r/(HL)
-            case 0x05: case 0x0D: case 0x15: case 0x1D: case 0x25: case 0x2D: case 0x35: case 0x3D:
+            case 0x05: case 0x0D: case 0x15: case 0x1D:     //- DEC r/(HL)
+            case 0x25: case 0x2D: case 0x35: case 0x3D:
                 ExecuteDecRHl(opcode); return;
-            
-            //--- ADD A,r
-            case 0x80: case 0x81: case 0x82: case 0x83:
+            case 0x80: case 0x81: case 0x82: case 0x83:     //- ADD A,r
             case 0x84: case 0x85: case 0x86: case 0x87:
-            {
-                byte a = _state.A;
-
-                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
-                int src = opcode & 0x07;
-
-                byte val  = ReadReg8(src);   // Read source operand (reg or memory at HL)
-                int  sum  = a + val;         // Perform addition with 8-bit wraparound.
-
-                _state.A = (byte) sum;       // Store the result back in A.
-                SetFlagsZNHC(
-                    z: _state.A == 0,                            // set if carry is 0.
-                    n: false,                                    // reset.
-                    h: ((a & 0x0F) + (val & 0x0F)) > 0x0F,       // set if carry from bit 3 to bit 4.
-                    c: sum > 0xFF);                              // set if carry out of bit 7.
-                
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - HL form only: 8 cycles.
-                if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- ADC A,r
-            case 0x88: case 0x89: case 0x8A: case 0x8B:
+                ExecuteAddAr(opcode); return;
+            case 0x88: case 0x89: case 0x8A: case 0x8B:     //- ADC A,r
             case 0x8C: case 0x8D: case 0x8E: case 0x8F:
-            {
-                byte a = _state.A;
-                
-                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
-                int src = opcode & 0x07;
-
-                byte val     = ReadReg8(src);           // Read source operand (reg or memory at HL)
-                int  carryIn = _state.FlagC ? 1 : 0;    // Carry-in is the current C flag.
-                int  sum     = a + val + carryIn;       // Perform the addition.
-                
-                _state.A = (byte) sum;                  // Store the result back in A.
-                SetFlagsZNHC(
-                    z: _state.A == 0,                                // set if carry is 0.
-                    n: false,                                        // reset.
-                    h: ((a & 0x0F) + (val & 0x0F) + carryIn) > 0x0F, // set if carry from bit 3.
-                    c: sum > 0xFF);                                  // set if carry from bit 7.
-                
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - HL form only: 8 cycles.
-                if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- ADD/ADC A,d8
-            case 0xC6:/*ADD A,d8*/ case 0xCE:/*ADC A,d8*/
-            {
-                byte a = _state.A;
-                
-                byte val    = ReadNextByte();                           // Read immediate 8-bit operand from instruction stream.
-                int carryIn = (opcode == 0xCE && _state.FlagC) ? 1 : 0; // ADC includes carry-in from the current C flag; ADD does not.
-                int sum     = a + val + carryIn;                        // Perform addition with 8-bit wraparound.
-                
-                _state.A = (byte)sum;                                   // Store the result back in A.
-                SetFlagsZNHC(
-                    z: _state.A == 0,                                   // set if result is 0.
-                    n: false,                                           // reset.
-                    h: ((a & 0x0F) + (val & 0x0F) + carryIn) > 0x0F,    // set on half-carry.
-                    c: sum > 0xFF);                                     // set on full carry.
-
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - ADD/ADC A,d8: 4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- SUB A,r
-            case 0x90: case 0x91: case 0x92: case 0x93:
+                ExecuteAdcAr(opcode); return;
+            case 0xC6:                                      //- ADD A,d8
+            case 0xCE:                                      //- ADC A,d8
+                ExecuteAddAdcAd8(opcode); return;
+            case 0x90: case 0x91: case 0x92: case 0x93:     //- SUB A,r
             case 0x94: case 0x95: case 0x96: case 0x97:
-            {
-                byte a = _state.A;
-
-                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
-                int src = opcode & 0x07;
-                
-                byte val  = ReadReg8(src);   // Read source operand (reg or memory at HL)
-                int  diff = a - val;         // Perform subtraction with 8-bit wraparound.
-                
-                _state.A = (byte) diff;      // Store the result back in A.
-                SetFlagsZNHC(
-                    z: _state.A == 0,                // set if result is 0.
-                    n: true,                         // set.
-                    h: (a & 0x0F) < (val & 0x0F),    // set on half-borrow (borrow from bit 4)
-                    c: a < val);                     // set on full borrow (A < val)
-                
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - HL form only: 8 cycles.
-                if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- SBC A,r
-            case 0x98: case 0x99: case 0x9A: case 0x9B:
+                ExecuteSubAr(opcode); return;
+            case 0x98: case 0x99: case 0x9A: case 0x9B:     //- SBC A,r
             case 0x9C: case 0x9D: case 0x9E: case 0x9F:
-            {
-                byte a = _state.A;
-                
-                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
-                int src = opcode & 0x07;
-
-                byte val     = ReadReg8(src);           // Read source operand (reg or memory at HL)
-                int  carryIn = _state.FlagC ? 1 : 0;    // Carry-in is the current C flag.
-                int  diff    = a - val - carryIn;       // Perform the subtraction.
-                
-                _state.A = (byte) diff;                  // Store the result back in A.
-                SetFlagsZNHC(
-                    z: _state.A == 0,                            // set if result is 0.
-                    n: true,                                     // set.
-                    h: (a & 0x0F) < ((val & 0x0F) + carryIn),    // set on half-borrow (bit 4 borrow).
-                    c: a < (val + carryIn));                     // set on full borrow.
-                
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - HL form only: 8 cycles.
-                if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- SUB/SBC A,d8
-            case 0xD6:/*SUB A,d8*/ case 0xDE:/*SBC A,d8*/
-            {
-                byte a = _state.A;
-                
-                byte val    = ReadNextByte();                           // Read immediate 8-bit operand from instruction stream.
-                int carryIn = (opcode == 0xDE && _state.FlagC) ? 1 : 0; // ADC includes carry-in from the current C flag; ADD does not.
-                int diff    = a - val - carryIn;                        // Perform addition with 8-bit wraparound.
-                
-                _state.A = (byte)diff;                                  // Store the result back in A.
-                SetFlagsZNHC(
-                    z: _state.A == 0,                                   // set if result is 0.
-                    n: true,                                            // reset.
-                    h: (a & 0x0F) < ((val & 0x0F) + carryIn),           // set on half-carry.
-                    c: a < (val + carryIn));                            // set on full carry.
-
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - SUB/SBC A,d8: 4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- AND A,r
-            case 0xA0: case 0xA1: case 0xA2: case 0xA3:
+                ExecuteSbcAr(opcode); return;
+            case 0xD6:                                      //- SBC A,d8
+            case 0xDE:                                      //- SBC A,d8
+                ExecuteSubSbcAd8(opcode); return;
+            case 0xA0: case 0xA1: case 0xA2: case 0xA3:     //- AND A,r
             case 0xA4: case 0xA5: case 0xA6: case 0xA7:
-            {
-                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
-                int src = opcode & 0x07;
-                
-                byte val = ReadReg8(src);           // Read source operand (register or memory at HL).
-                _state.A = (byte)(_state.A & val);  // Perform bitwise AND into A.
-                
-                SetFlagsZNHC(
-                    z: _state.A == 0,   // set if result is 0.
-                    n: false,           // reset.
-                    h: true,            // set.
-                    c: false            // reset.
-                );
-
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - HL form only: 8 cycles.
-                if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            //--- AND A,d8
-            case 0xE6:
-            {
-                // Perform a bitwise AND operation on reg A and the next byte. 
-                _state.A = (byte)(_state.A & ReadNextByte()); 
-                SetFlagsZNHC(
-                    z: _state.A == 0,           // set if result is 0.
-                    n: false,                   // reset.
-                    h: true,                    // set.
-                    c: false                    // reset.
-                );
-                
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - AND A,d8:     4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- XOR A,r
-            case 0xA8: case 0xA9: case 0xAA: case 0xAB:
+                ExecuteAndAr(opcode); return;
+            case 0xE6:                                      //- AND A,d8
+                ExecuteAndAd8(opcode); return;
+            case 0xA8: case 0xA9: case 0xAA: case 0xAB:     //- XOR A,r
             case 0xAC: case 0xAD: case 0xAE: case 0xAF:
-            {
-                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
-                int src = opcode & 0x07;
-                
-                byte val = ReadReg8(src);           // Read source operand (register or memory at HL).
-                _state.A = (byte)(_state.A ^ val);  // Perform bitwise XOR into A.
-                
-                SetFlagsZNHC(
-                    z: _state.A == 0,   // set if result is 0.
-                    n: false,           // reset.
-                    h: false,           // reset.
-                    c: false);          // reset.
-                
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - HL form only: 8 cycles.
-                if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            //--- XOR A,d8
-            case 0xEE:
-            {
-                // Perform a bitwise XOR operation on reg A and the next byte. 
-                _state.A = (byte)(_state.A ^ ReadNextByte()); 
-                SetFlagsZNHC(
-                    z: _state.A == 0,           // set if result is 0.
-                    n: false,                   // reset.
-                    h: false,                   // reset.
-                    c: false);                  // reset.
-                
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - XOR A,d8:     4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            
-            
-            //--- OR A,r
-            case 0xB0: case 0xB1: case 0xB2: case 0xB3:
+                ExecuteXorAr(opcode); return;
+            case 0xEE:                                      //- XOR A,d8
+                ExecuteXorAd8(opcode); return;
+            case 0xB0: case 0xB1: case 0xB2: case 0xB3:     //- OR A,r
             case 0xB4: case 0xB5: case 0xB6: case 0xB7:
-            {
-                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
-                int src = opcode & 0x07;
-                
-                byte val = ReadReg8(src);           // Read source operand (register or memory at HL).
-                _state.A = (byte)(_state.A | val);  // Perform bitwise OR into A.
-                
-                SetFlagsZNHC(
-                    z: _state.A == 0,   // set if result is 0.
-                    n: false,           // reset.
-                    h: false,           // reset.
-                    c: false            // reset.
-                );
-                
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - HL form only: 8 cycles.
-                if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            //--- OR A,d8
-            case 0xF6:
-            {
-                // Perform a bitwise OR operation on reg A and the next byte. 
-                _state.A = (byte)(_state.A | ReadNextByte()); 
-                SetFlagsZNHC(
-                    z: _state.A == 0,           // set if result is 0.
-                    n: false,                   // reset.
-                    h: false,                   // reset.
-                    c: false);                  // reset.
-                
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - OR A,d8:      4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- CP A,r
-            case 0xB8: case 0xB9: case 0xBA: case 0xBB:
+                ExecuteOrAr(opcode); return;
+            case 0xF6:                                      //- OR A,d8
+                ExecuteOrAd8(opcode); return;
+            case 0xB8: case 0xB9: case 0xBA: case 0xBB:     //- CP A,r
             case 0xBC: case 0xBD: case 0xBE: case 0xBF:
-            {
-                byte a = _state.A;
-                
-                // Bits 2-0 encode source register: 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
-                int src = opcode & 0x07;
-                
-                byte val = ReadReg8(src);           // Read source operand (register or memory at HL).
-                byte res = (byte)(a - val);         // Compare is a subtraction for flags only (A unchanged).
-                
-                SetFlagsZNHC(
-                    z: res == 0,                    // set if A == val (result zero)
-                    n: true,                        // set.
-                    h: (a & 0x0F) < (val & 0x0F),   // set on half-borrow.
-                    c: a < val);                    // set on full borrow.
-                
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - HL form only: 8 cycles.
-                if (src == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            //--- CP A,d8
-            case 0xFE:
-            {
-                byte a   = _state.A;        // Value in register A.
-                byte val = ReadNextByte();  // Read next byte in stream.
-                
-                // Compare is a subtraction for flags only (A unchanged).
-                byte res = (byte)(a - val);
-                SetFlagsZNHC(
-                    z: res == 0,                    // set if A == d8
-                    n: true,                        // set.
-                    h: (a & 0x0F) < (val & 0x0F),   // set on half-borrow.
-                    c: a < val);                    // set on full borrow.
-                
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - CP A,d8:      4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-                
-            //--- DAA (Decimal Adjust After)
-            case 0x27:
-            {
-                // DAA adjusts A to a valid BCD result after ADD/ADC or SUB/SBC,
-                // using the current N/H/C flags to determine which corrections to apply.
-                byte a = _state.A; byte correction = 0;
-                bool n = _state.FlagN; bool h = _state.FlagH; bool c = _state.FlagC;
-
-                if (!n) // Addition correction
-                {
-                    if (h || (a & 0x0F) > 0x09) // If half-carry set or low nibble > 9
-                        correction |= 0x06;     // add 0x06.
-                    
-                    if (c || a > 0x99)          //  If carry set or A > 0x99
-                    {
-                        correction |= 0x60;     // add 0x60 and set carry.
-                        c = true;
-                    }
-
-                    a = (byte)(a + correction);
-                }
-                else    // Subtraction correction
-                {
-                    if (h) correction |= 0x06;  // If half-carry set, subtract 0x06.
-                    if (c) correction |= 0x60;  // If carry set, subtract 0x60.
-                    
-                    a = (byte)(a - correction);
-                }
-
-                _state.A = a;
-                SetFlagsZNHC(
-                    z: _state.A == 0,   // set if adjusted A is 0.
-                    n: n,               // unchanged.
-                    h: false,           // reset.
-                    c: c);              // unchanged.
-                
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- CPL (Complement Accumulator)
-            case 0x2F:
-            {
-                _state.A = (byte)~_state.A;  // Invert all bits in A (1's complement).
-                
-                SetFlagsZNHC(
-                    z: _state.FlagZ,    // unchanged.
-                    n: true,            // set.
-                    h: true,            // set.
-                    c: _state.FlagC);   // unchanged.
-                
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- SCF (Set Carry Flag)
-            case 0x37:
-            {
-                SetFlagsZNHC(
-                    z: _state.FlagZ,    // unchanged.
-                    n: false,           // reset.
-                    h: false,           // reset.
-                    c: true);           // set.
-                
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- CCF (Compliment Carry Flag)
-            case 0x3F:
-            {
-                SetFlagsZNHC(
-                    z: _state.FlagZ,    // unchanged.
-                    n: false,           // reset.
-                    h: false,           // reset.
-                    c: !_state.FlagC);  // complement carry.
-                
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                CompleteInstruction();
-                return;
-            }
+                ExecuteCpAr(opcode); return;
+            case 0xFE:                                      //- CP A,d8
+                ExecuteCpAd8(opcode); return;
+            case 0x27:                                      //- DAA
+                ExecuteDaa(opcode); return;
+            case 0x2F:                                      //- CPL
+                ExecuteCpl(opcode); return;
+            case 0x37:                                      //- SCF
+                ExecuteScf(opcode); return;
+            case 0x3F:                                      //- CCF
+                ExecuteCcf(opcode); return;
+            //------------------------------------------------------------//
 
             //----------    ROTATE    ----------//
             //--- RLCA (Rotate Left Circular Accumulator)
