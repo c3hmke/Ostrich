@@ -1,6 +1,8 @@
 # Ostrich emulator
 
-A simple Game Boy emulator written in C# using SDL2 and ImGUI.
+A simple Game Boy emulator written in C# using SDL2 and ImGUI. This project is currently in backburner development, feel free to have a poke around.
+The current main focus has been on implementing the opcodes and making debugging possible, turning on the debugging feature via the menu will show
+you what's getting loaded into the registers as the ROM loads, the display currently doesn't output yet.
 
 ### FAQs
 
