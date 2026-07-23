@@ -125,31 +125,9 @@ public sealed partial class LR35902 : ICPU
                 CompleteInstruction();
                 return;
             }
-
-            //----------    LD16    ----------//
-            //--- LD rr,d16
-            case 0x01: case 0x11: case 0x21: case 0x31:
-            {
-                // Read the next 16-bits from operand; advances PC past both bytes.
-                ushort val = ReadNextWord();
-
-                // bits 5-4 of these opcodes encode which 16-bit register pair to load:
-                // 00=BC, 01=DE, 10=HL, 11=SP
-                switch ((opcode >> 4) & 0x03)
-                {
-                    case 0x00: _state.BC = val; break;
-                    case 0x01: _state.DE = val; break;
-                    case 0x02: _state.HL = val; break;
-                    case 0x03: _state.SP = val; break;
-                }
-                
-                // Timing:  (12 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - LD rr,d16:    8 cycles.
-                _state.AddClockCycles(MachineCycle * 2);
-                CompleteInstruction();
-                return;
-            }
+            
+            case 0x01: case 0x11: case 0x21: case 0x31:     //--- LD rr,d16
+                LD_rr_d16(opcode); return;
             
             //------------------------    ALU16   ------------------------//
             case 0x03: case 0x13: case 0x23: case 0x33:     //--- INC rr
@@ -167,18 +145,7 @@ public sealed partial class LR35902 : ICPU
             case 0xF8:                                      //--- LD HL,SP+e8
                 LD_HL_SPe8(); return;
             
-            //--- LD SP,HL
-            case 0xF9:
-            {
-                _state.SP = _state.HL;   // Copy the 16-bit value in HL into SP.
-
-                // Timing:  (8 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - LD SP,HL:     4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
+            case 0xF9: LD_SP_HL(); return;                  //--- LD SP,HL
             
 
             //----------    LD8    ----------//
@@ -599,24 +566,8 @@ public sealed partial class LR35902 : ICPU
             
             case 0xEA: LD_a16_A(); return;                      //--- LD (a16),A
             case 0xFA: LD_A_a16(); return;                      //--- LD A,(a16)
-
-            //--- LD (a16),SP
-            case 0x08:
-            {
-                // Read the destination address from the immediate operand.
-                ushort dest = ReadNextWord();
-
-                // Store SP as little-endian at [a16] and [a16+1].
-                _bus.WriteByte(dest, (byte)(_state.SP & 0x00FF));
-                _bus.WriteByte((ushort)(dest + 1), (byte)(_state.SP >> 8));
-
-                // Timing:  (20 total)
-                //  - opcode fetch:  4 cycles.
-                //  - LD (a16),SP:   16 cycles.
-                _state.AddClockCycles(MachineCycle * 4);
-                CompleteInstruction();
-                return;
-            }
+            
+            case 0x08: LD_a16_SP(); return;                     //--- LD (a16),SP
             
             default: throw new NotSupportedException($"Opcode {opcode} not supported");
         }
