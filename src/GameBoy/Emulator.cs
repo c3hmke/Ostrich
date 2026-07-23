@@ -8,8 +8,8 @@ public class Emulator : IEmulator
 {
     private readonly GBVideoSource _screen = new();
     private readonly GBInputSink   _input  = new();
-    private readonly LR35902       _cpu = new();
-
+    private readonly LR35902       _cpu    = new();
+    
     public  Cartridge?  LoadedCartridge { get; private set; }
     private Bus?        _bus;
     
@@ -17,7 +17,8 @@ public class Emulator : IEmulator
     public IInputSink   Input       => _input;
     public IInputState  InputState  => _input;
     public ICPU         CPU         => _cpu;
-
+    
+    private readonly ulong _cyclesPerFrame = 70224;
 
     /// <summary> Indicates if a cartridge is successfully loaded. </summary>
     public bool IsROMLoaded => LoadedCartridge is not null;
@@ -64,10 +65,12 @@ public class Emulator : IEmulator
     {
         if (LoadedCartridge is null || _bus is null) 
             return;
-
-        const int instructionBudget = 64;
-        for (int i = 0; i < instructionBudget; i++)
+        
+        ulong frameEndCycle = _cpu.State.CycleCount + _cyclesPerFrame;
+        while (_cpu.State.CycleCount < frameEndCycle)
         {
+            ulong cyclesBefore = _cpu.State.CycleCount;
+            
             try
             {
                 _cpu.StepInstruction();
@@ -78,6 +81,11 @@ public class Emulator : IEmulator
                 // once we hit an opcode we haven't implemented yet.
                 break;
             }
+            
+            // Temporary guard: current HALT/STOP paths may consume no cycles,
+            // which would otherwise make this loop infinite.
+            if (_cpu.State.CycleCount == cyclesBefore)
+                break;
         }
         
         _screen.Clear(0xFFAAFFAA); // Placeholder until CPU/PPU exist.
