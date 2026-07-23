@@ -297,215 +297,36 @@ public sealed partial class LR35902 : ICPU
             }
             
             //----------    FLOW    ----------//
-            //--- JR r8
-            case 0x18:
-            {
-                sbyte offset = unchecked((sbyte)ReadNextByte());
-                _state.PC = (ushort)(_state.PC + offset);
-                
-                _state.AddClockCycles(MachineCycle * 2); // total 12
-                CompleteInstruction();
-                return;
-            }
+            case 0x18: JR_r8(opcode); return;                   //--- JR r8
             
-            //--- JR N',e8
-            case 0x20:/*JR NZ,e8*/ case 0x28:/*JR Z,e8*/
+            case 0x20:/*JR NZ,e8*/ case 0x28:/*JR Z,e8*/        //--- JR N',e8
             case 0x30:/*JR NC,e8*/ case 0x38:/*JR C,e8*/
-            {
-                sbyte offset       = unchecked((sbyte)ReadNextByte());
-                ConditionCode cond = (ConditionCode)((opcode >> 3) & 0x03);
-
-                if (CheckCond(cond))
-                {
-                    _state.PC = (ushort)(_state.PC + offset);
-                    
-                    // Timing:  (12 total cycles)
-                    //  - opcode fetch: 4 cycles.
-                    //  - JR N',e8:     8 cycles.
-                    _state.AddClockCycles(MachineCycle * 2);
-                }
-                else
-                {
-                    // Timing:  (12 total cycles)
-                    //  - opcode fetch:     4 cycles.
-                    //  - JR N',e8 no pop:  4 cycles.
-                    _state.AddClockCycles(MachineCycle);
-                }
-                
-                CompleteInstruction();
-                return;
-            }
+                JR_N_e8(opcode); return;
             
-            //--- JP a16
-            case 0xC3:
-            {
-                _state.PC = ReadNextWord(); // Jump to the next address in bitstream.
-                
-                // Timing:  (16 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - JP a16:       12 cycles.
-                _state.AddClockCycles(MachineCycle * 3);
-                CompleteInstruction();
-                return;
-            }
-
-            //--- JP cc,a16
-            case 0xC2:/*NZ,a16*/ case 0xCA:/*Z,a16*/
+            case 0xC3: JP_a16(); return;                        //--- JP a16
+            
+            case 0xC2:/*NZ,a16*/ case 0xCA:/*Z,a16*/            //--- JP cc,a16
             case 0xD2:/*NC,a16*/ case 0xDA:/*C,a16*/
-            {
-                ushort target    = ReadNextWord();
-                ConditionCode cc = (ConditionCode)((opcode >> 3) & 0x03);
-
-                if (CheckCond(cc))
-                {
-                    _state.PC = target;
-
-                    // Timing:  (16 total cycles)
-                    //  - opcode fetch: 4 cycles.
-                    //  - JP cc,a16:   12 cycles.
-                    _state.AddClockCycles(MachineCycle * 3);
-                }
-                else
-                {
-                    // Timing:  (12 total cycles)
-                    //  - opcode fetch:    4 cycles.
-                    //  - JP cc,a16 miss:  8 cycles.
-                    _state.AddClockCycles(MachineCycle * 2);
-                }
-
-                CompleteInstruction();
-                return;
-            }
+                JP_cc_a16(opcode); return;
             
-            //--- JP HL
-            case 0xE9:
-            {
-                _state.PC = _state.HL;  // Jump to address currently in HL
-                
-                // Timing:  (4 total cycles)
-                //  - opcode fetch:    4 cycles.
-                CompleteInstruction();
-                return;
-            }
-
-            //--- RET cc
-            case 0xC0:/*NZ,a16*/ case 0xC8:/*Z,a16*/
+            case 0xE9: JP_HL(); return;                         //--- JP HL
+            
+            case 0xC0:/*NZ,a16*/ case 0xC8:/*Z,a16*/            //--- RET cc
             case 0xD0:/*NC,a16*/ case 0xD8:/*C,a16*/
-            {
-                ConditionCode cond = (ConditionCode)((opcode >> 3) & 0x03);
-
-                if (CheckCond(cond))
-                {
-                    // Condition met: pop return address into PC.
-                    _state.PC = PopWord();
-
-                    // Timing:  (20 total cycles)
-                    //  - opcode fetch: 4 cycles.
-                    //  - RET cc:       16 cycles
-                    _state.AddClockCycles(MachineCycle * 4);
-                }
-                else
-                {
-                    // Timing:  (8 total cycles)
-                    //  - opcode fetch:  4 cycles.
-                    //  - RET cc no pop: 4 cycles
-                    _state.AddClockCycles(MachineCycle);
-                }
-
-                CompleteInstruction();
-                return;
-            }
-
-            //--- RET
-            case 0xC9:
-            {
-                _state.PC = PopWord();
-                
-                // Timing:  (16 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - RET:          12 cycles
-                _state.AddClockCycles(MachineCycle * 3); // total 16
-                CompleteInstruction();
-                return;
-            }
-
-            //--- RETI (Return from Interrupt)
-            case 0xD9:
-            {
-                _state.PC = PopWord();      // Return from interrupt: pop return address into PC.
-                _state.EnableInterrupts();  // RETI re-enables IME immediately.
-
-                // Timing:  (16 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - RETI:         12 cycles.
-                _state.AddClockCycles(MachineCycle * 3);
-                
-                CompleteInstruction();
-                return;
-            }
+                RET_cc(opcode); return;
             
-            //--- RST vec (Call to a fixed vector)
-            case 0xC7: case 0xCF: case 0xD7: case 0xDF:
+            case 0xC9: RET();  return;                          //--- RET
+            case 0xD9: RETI(); return;                          //--- RETI (Return from Interrupt)
+            
+            case 0xC7: case 0xCF: case 0xD7: case 0xDF:         //--- RST vec (Call to a fixed vector)
             case 0xE7: case 0xEF: case 0xF7: case 0xFF:
-            {
-                ushort vec = (ushort)(opcode & 0x38);   // Compute vector from opcode.
-                
-                PushWord(_state.PC);                    // Store the return address.
-                _state.PC = vec;                        // Then jump to vector.
-                
-                // Timing:  (16 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - RST vec:      12 cycles.
-                _state.AddClockCycles(MachineCycle * 3);
-                CompleteInstruction();
-                return;
-            }
+                RST_vec(opcode); return;
             
-            //--- CALL cc,a16
-            case 0xC4:/*NZ,a16*/ case 0xCC:/*Z,a16*/
+            case 0xC4:/*NZ,a16*/ case 0xCC:/*Z,a16*/            //--- CALL cc,a16
             case 0xD4:/*NC,a16*/ case 0xDC:/*C,a16*/
-            {
-                ushort target    = ReadNextWord();
-                ConditionCode cc = (ConditionCode)((opcode >> 3) & 0x03);
-
-                if (CheckCond(cc))
-                {
-                    PushWord(_state.PC);    // Push return address.
-                    _state.PC = target;     // Jump to target.
-
-                    // Timing: 24 total cycles.
-                    // - opcode fetch: 4 cycles.
-                    // - CALL cc,a16:  20 cycles.
-                    _state.AddClockCycles(MachineCycle * 5);
-                }
-                else
-                {
-                    // Condition not met: no push, no jump.
-                    // Timing: 12 total cycles.
-                    // - opcode fetch:       4 cycles.
-                    // - CALL cc,a16 miss:   8 cycles.
-                    _state.AddClockCycles(MachineCycle * 2);
-                }
-
-                CompleteInstruction();
-                return;
-            }
-
-            //--- CALL a16
-            case 0xCD:
-            {
-                ushort target = ReadNextWord();
-                
-                PushWord(_state.PC);    // Push return address.
-                _state.PC = target;     // Jump to target.
-                
-                // Timing: 24 total cycles.
-                // - opcode fetch: 4 cycles.
-                // - CALL a16:     20 cycles.
-                _state.AddClockCycles(MachineCycle * 5);
-                CompleteInstruction();
-                return;
-            }
+                CALL_cc_a16(opcode); return;
+            
+            case 0xCD: CALL_a16(); return;                      //--- CALL a16
             
             //----------    STACK    ----------//
             //--- POP rr
@@ -781,19 +602,6 @@ public sealed partial class LR35902 : ICPU
     
     /// <summary> Makes condition code usage clearer than raw ints </summary>
     private enum ConditionCode { NZ = 0, Z  = 1, NC = 2, C  = 3 }
-    
-    /// <summary> Evaluate NZ/Z/NC/C condition code used by JR/JP/CALL/RET conditional forms. </summary>
-    private bool CheckCond(ConditionCode cond)
-    {
-        return cond switch
-        {
-            ConditionCode.NZ => !_state.FlagZ,
-            ConditionCode.Z  =>  _state.FlagZ,
-            ConditionCode.NC => !_state.FlagC,
-            ConditionCode.C  =>  _state.FlagC,
-            _ => throw new ArgumentOutOfRangeException(nameof(cond), cond, null)
-        };
-    }
 
     /// <summary> Applies any delayed EI effect after the current instruction completes, then returns. </summary>
     private void CompleteInstruction()
