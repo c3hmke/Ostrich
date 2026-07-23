@@ -5,7 +5,7 @@ public sealed partial class LR35902
     //--------------------------------------------------------------------------------------------------//
     //                                           ALU8 OPCODES                                           //
     //--------------------------------------------------------------------------------------------------//
-    /// <summary> Executes opcodes used for the 8-bit Arithmetic Logic Unit. </summary>
+    /// <summary> Executes opcodes that perform 8-bit arithmetic, logic, compare, and flag operations. </summary>
 
     /// <summary> Increment one 8-bit register or the byte at HL. </summary>
     private void INC_r_HL(ushort opcode)

@@ -185,44 +185,11 @@ public sealed partial class LR35902 : ICPU
             //--- LD r,d8
             case 0x06: case 0x0E: case 0x16: case 0x1E: 
             case 0x26: case 0x2E: case 0x36: case 0x3E:
-            {
-                // Read the next 8-bits from bus; advances PC past that byte.
-                byte val = ReadNextByte();
-                
-                // Bits 5-3 encode the destination register index:
-                // 0=B, 1=C, 2=D, 3=E, 4=H, 5=L, 6=(HL), 7=A.
-                int dest = (opcode >> 3) & 0x07;
-                
-                WriteReg8(dest, val);
-                
-                
-                // Timing:  (8/12 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - LD r,d8:      4 cycles.
-                //  - LD (HL),d8:   8 cycles.
-                _state.AddClockCycles((dest == 6) ? MachineCycle * 2 : MachineCycle);
-                CompleteInstruction();
-                return;
-            }
+                LD_r_d8(opcode); return;
             
             //--- LD r,r' (0x40..0x7F, except 0x76 which is HALT, 64 opcodes total)
             case >= 0x40 and <= 0x7F when opcode != 0x76:
-            {
-                // Encoding:
-                int dst = (opcode >> 3) & 0x07; // bits 5-3 = destination register (B,C,D,E,H,L,(HL),A)
-                int src = opcode & 0x07;        // bits 2-0 = source register      (B,C,D,E,H,L,(HL),A)
-                
-                // Read from source register/memory and write to destination register/memory.
-                WriteReg8(dst, ReadReg8(src));
-                
-                // Timing:  (8/12 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - r->r form:    0 cycles.
-                //  - HL forms:     4 cycles.
-                if (src == 6 || dst == 6) _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
+                LD_r_r(opcode); return;
             
             //------------------------    ALU8    ------------------------//
             case 0x04: case 0x0C: case 0x14: case 0x1C:     //- INC r/(HL)
@@ -619,69 +586,19 @@ public sealed partial class LR35902 : ICPU
             }
 
             //----------    MEM    ----------//
-            //--- LD (BC/DE),A
-            case 0x02: case 0x12:
-            {
-                // Select the destination address from BC/DE based on opcode.
-                ushort dest = (opcode == 0x02 ? _state.BC : _state.DE);
-                
-                // Store accumulator into memory at the destination address.
-                _bus.WriteByte(dest, _state.A);
-                
-                // Timing:  (8 total)
-                //  - opcode fetch: 4 cycles.
-                //  - LD (BC/DE),A: 4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
+            case 0x02: case 0x12: LD_BCDE_A(opcode); return;    //--- LD (BC/DE),A
+            case 0x0A: case 0x1A: LD_A_BCDE(opcode); return;    //--- LD A,(BC/DE)
+            case 0x22: case 0x32: LD_HL_A(opcode);   return;    //--- LD (HL+/-),A
+            case 0x2A: case 0x3A: LD_A_HL(opcode);   return;    //--- LD A,(HL+/-)
             
-            //--- LD A,(BC/DE)
-            case 0x0A: case 0x1A:
-            {
-                // Select the source address from BC/DE based on opcode.
-                ushort src = (opcode == 0x0A ? _state.BC : _state.DE);
-                
-                // Load accumulator from memory at the source address.
-                _state.A = _bus.ReadByte(src);
-                
-                // Timing:  (8 total)
-                //  - opcode fetch: 4 cycles.
-                //  - LD A,(BC/DE): 4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
+            case 0xE0: LDH_a8_A(); return;                      //--- LDH (a8),A
+            case 0xF0: LDH_A_a8(); return;                      //--- LDH A,(a8)
             
-            // --- LD (HL+/-),A
-            case 0x22: case 0x32:
-            {
-                // Write to HL then increment or decrement based on opcode.
-                WriteAtHL(_state.A, 
-                    opcode == 0x22 ? HLStep.Increment : HLStep.Decrement);
-
-                // Timing:  (8 total)
-                //  - opcode fetch: 4 cycles.
-                //  - LD (HL+/-),A: 4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-
-            // --- LD A,(HL+/-)
-            case 0x2A: case 0x3A:
-            {
-                // Read from HL then increment or decrement based on opcode.
-                _state.A = ReadAtHL(
-                    opcode == 0x2A ? HLStep.Increment : HLStep.Decrement);
-
-                // Timing:  (8 total)
-                //  - opcode fetch: 4 cycles.
-                //  - LD (HL+/-),A: 4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
+            case 0xE2: LD_C_A();   return;                      //--- LD (C),A
+            case 0xF2: LD_A_C();   return;                      //--- LD A,(C)
+            
+            case 0xEA: LD_a16_A(); return;                      //--- LD (a16),A
+            case 0xFA: LD_A_a16(); return;                      //--- LD A,(a16)
 
             //--- LD (a16),SP
             case 0x08:
@@ -697,61 +614,6 @@ public sealed partial class LR35902 : ICPU
                 //  - opcode fetch:  4 cycles.
                 //  - LD (a16),SP:   16 cycles.
                 _state.AddClockCycles(MachineCycle * 4);
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- LDH (a8),A | LDH A,(a8)
-            case 0xE0:/*LDH (a8),A*/ case 0xF0:/*LDH A,(a8)*/
-            {
-                byte offset = ReadNextByte();               // Read 8-bit offset from instruction stream.
-                ushort addr = (ushort)(0xFF00 + offset);    // LDH uses high-memory I/O space at 0xFF00 + a8.
-                
-                if (opcode == 0xE0)
-                    _bus.WriteByte(addr, _state.A);         // Store accumulator into high-memory I/O/register space.
-                else
-                    _state.A = _bus.ReadByte(addr);         // Load accumulator from high-memory I/O/register space.
-                
-                // Timing:  (12 total)
-                //  - opcode fetch:             4 cycles.
-                //  - LDH (a8),A | LDH A,(a8):  8 cycles.
-                _state.AddClockCycles(MachineCycle * 2);
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- LD (C),A | LD A,(C)
-            case 0xE2:/*LD (C),A*/ case 0xF2:/*LD A,(C)*/
-            {
-                ushort addr = (ushort)(0xFF00 + _state.C);   // Uses high-memory I/O space addressed by register C.
-
-                if (opcode == 0xE2)
-                    _bus.WriteByte(addr, _state.A);          // Store accumulator into address 0xFF00 + C.
-                else
-                    _state.A = _bus.ReadByte(addr);          // Load accumulator from address 0xFF00 + C.
-
-                // Timing:  (8 total)
-                //  - opcode fetch:           4 cycles.
-                //  - LD (C),A | LD A,(C):    4 cycles.
-                _state.AddClockCycles(MachineCycle);
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- LD (a16),A | LD A,(a16)
-            case 0xEA:/*LDH (a16),A*/ case 0xFA:/*LDH A,(a16)*/          
-            {
-                ushort addr = ReadNextWord();         // Read full 16-bit address from instruction stream.
-                
-                if (opcode == 0xEA)
-                    _bus.WriteByte(addr, _state.A);   // Store accumulator at absolute address.
-                else
-                    _state.A = _bus.ReadByte(addr);   // Load accumulator from absolute address.
-
-                // Timing:  (16 total)
-                //  - opcode fetch:             4 cycles.
-                //  - LD (a16),A | LD A,(a16): 12 cycles.
-                _state.AddClockCycles(MachineCycle * 3); // total 16
                 CompleteInstruction();
                 return;
             }
@@ -988,4 +850,7 @@ public sealed partial class LR35902 : ICPU
         if (_interruptEnabledPendingStateSnapshot)
             _state.ApplyPendingInterruptEnable();
     }
+    
+    /// <summary> Get the attached bus, which must be present while executing opcodes. </summary>
+    private Bus Bus => _bus ?? throw new InvalidOperationException("CPU bus is not attached.");
 }

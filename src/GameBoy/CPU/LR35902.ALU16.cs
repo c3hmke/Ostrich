@@ -5,7 +5,7 @@ public sealed partial class LR35902
     //--------------------------------------------------------------------------------------------------//
     //                                           ALU16 OPCODES                                          //
     //--------------------------------------------------------------------------------------------------//
-    /// Executes opcodes used for the 16-bit Arithmetic Logic Unit.
+    /// <summary> Executes opcodes that perform 16-bit arithmetic and signed stack-pointer arithmetic. </summary>
 
     /// <summary> Increment one 16-bit register pair: BC, DE, HL, or SP. </summary>
     private void INC_rr(ushort opcode)

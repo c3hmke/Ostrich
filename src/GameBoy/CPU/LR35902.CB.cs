@@ -8,6 +8,7 @@ public sealed partial class LR35902
     //--------------------------------------------------------------------------------------------------//
     //                                        CB-PREFIXED OPCODES                                       //
     //--------------------------------------------------------------------------------------------------//
+    /// <summary> Executes CB-prefixed rotate, shift, and bit manipulation opcodes. </summary>
     
     /// <summary>
     /// Executes the second byte of a CB-prefixed instruction.
