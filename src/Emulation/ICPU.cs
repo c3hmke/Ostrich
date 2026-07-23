@@ -21,14 +21,10 @@ public interface ICPUState
     //--------------------------------------------------------------------------------------------------//
     //                                          Registers                                               //
     //--------------------------------------------------------------------------------------------------//
-    byte A { get; }
-    byte B { get; }
-    byte C { get; }
-    byte D { get; }
-    byte E { get; }
-    byte F { get; }
-    byte H { get; }
-    byte L { get; }
+    byte A { get; } byte B { get; }
+    byte C { get; } byte D { get; }
+    byte E { get; } byte F { get; }
+    byte H { get; } byte L { get; }
     
     //--------------------------------------------------------------------------------------------------//
     //                                            FLAGS                                                 //
@@ -57,4 +53,10 @@ public interface ICPUState
 public interface ICPU
 {
     ICPUState State { get; }
+
+    /// <summary>
+    /// Advances the CPU by one instruction or interrupt/idle step,
+    /// returning the number of clock cycles consumed.
+    /// </summary>
+    uint StepInstruction();
 }

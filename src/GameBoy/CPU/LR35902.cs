@@ -45,17 +45,30 @@ public sealed partial class LR35902 : ICPU
     //--------------------------------------------------------------------------------------------------//
     //                                            OPCODES                                               //
     //--------------------------------------------------------------------------------------------------//
-    /// <summary> Step the next instruction and executes the opcode found at that instruction. </summary>
-    public void StepInstruction()
+    /// <summary>
+    /// Step the next instruction then execute the opcode at that location
+    /// and return the number of clock cycles used in this step.
+    /// </summary>
+    public uint StepInstruction()
     {
-        if (_bus is null) return;   // nothing loaded so nothing to do
+        // Either no ROM is loaded or the execution is stopped, simply return.
+        if (_bus is null || _state.Stopped)
+            return 0;
+        
+        // Note the number of cycles used before execution the instruction.
+        ulong cycleCountBeforeStep = _state.CycleCount;
         
         // Interrupt wake/service is checked before normal opcode execution.
         // HALT wakes when any enabled interrupt is pending. Interrupt servicing itself only occurs when IME is enabled.
-        if (HandleInterrupts()) return;
+        if (HandleInterrupts())
+            return (uint)(_state.CycleCount - cycleCountBeforeStep);
         
-        // Don't step if state is halted or stopped.
-        if (_state.Halted || _state.Stopped) return;
+        // Don't step if state is halted, but use a machine cycle waiting.
+        if (_state.Halted)
+        {
+            _state.AddClockCycles(MachineCycle);
+            return MachineCycle;
+        }
         
         // EI on previous instruction is applied only after the current instruction completes.
         // Create a snapshot of the current InterruptEnabledPending state.
@@ -70,165 +83,167 @@ public sealed partial class LR35902 : ICPU
         switch (opcode)
         {
             //------------------------    CONTROL    ------------------------//
-            case 0x00: NOP();  return;                          //--- NOP
-            case 0x10: STOP(); return;                          //--- STOP
-            case 0x76: HALT(); return;                          //--- HALT
-            case 0xF3: DI();   return;                          //--- DI (Disable Interrupts)
-            case 0xFB: EI();   return;                          //--- EI (Enable Interrupts)
+            case 0x00: NOP();  break;                          //--- NOP
+            case 0x10: STOP(); break;                          //--- STOP
+            case 0x76: HALT(); break;                          //--- HALT
+            case 0xF3: DI();   break;                          //--- DI (Disable Interrupts)
+            case 0xFB: EI();   break;                          //--- EI (Enable Interrupts)
             
             //------------------------     FLOW    ------------------------//
-            case 0x18: JR_r8(opcode); return;                   //--- JR r8
+            case 0x18: JR_r8(opcode); break;                   //--- JR r8
             
-            case 0x20:/*JR NZ,e8*/ case 0x28:/*JR Z,e8*/        //--- JR N',e8
+            case 0x20:/*JR NZ,e8*/ case 0x28:/*JR Z,e8*/       //--- JR N',e8
             case 0x30:/*JR NC,e8*/ case 0x38:/*JR C,e8*/
-                JR_N_e8(opcode); return;
+                JR_N_e8(opcode); break;
             
-            case 0xC3: JP_a16(); return;                        //--- JP a16
+            case 0xC3: JP_a16(); break;                        //--- JP a16
             
-            case 0xC2:/*NZ,a16*/ case 0xCA:/*Z,a16*/            //--- JP cc,a16
+            case 0xC2:/*NZ,a16*/ case 0xCA:/*Z,a16*/           //--- JP cc,a16
             case 0xD2:/*NC,a16*/ case 0xDA:/*C,a16*/
-                JP_cc_a16(opcode); return;
+                JP_cc_a16(opcode); break;
             
-            case 0xE9: JP_HL(); return;                         //--- JP HL
+            case 0xE9: JP_HL(); break;                         //--- JP HL
             
-            case 0xC0:/*NZ,a16*/ case 0xC8:/*Z,a16*/            //--- RET cc
+            case 0xC0:/*NZ,a16*/ case 0xC8:/*Z,a16*/           //--- RET cc
             case 0xD0:/*NC,a16*/ case 0xD8:/*C,a16*/
-                RET_cc(opcode); return;
+                RET_cc(opcode); break;
             
-            case 0xC9: RET();  return;                          //--- RET
-            case 0xD9: RETI(); return;                          //--- RETI (Return from Interrupt)
+            case 0xC9: RET();  break;                          //--- RET
+            case 0xD9: RETI(); break;                          //--- RETI (Return from Interrupt)
             
-            case 0xC7: case 0xCF: case 0xD7: case 0xDF:         //--- RST vec (Call to a fixed vector)
+            case 0xC7: case 0xCF: case 0xD7: case 0xDF:        //--- RST vec (Call to a fixed vector)
             case 0xE7: case 0xEF: case 0xF7: case 0xFF:
-                RST_vec(opcode); return;
+                RST_vec(opcode); break;
             
-            case 0xC4:/*NZ,a16*/ case 0xCC:/*Z,a16*/            //--- CALL cc,a16
+            case 0xC4:/*NZ,a16*/ case 0xCC:/*Z,a16*/           //--- CALL cc,a16
             case 0xD4:/*NC,a16*/ case 0xDC:/*C,a16*/
-                CALL_cc_a16(opcode); return;
+                CALL_cc_a16(opcode); break;
             
-            case 0xCD: CALL_a16(); return;                      //--- CALL a16
+            case 0xCD: CALL_a16(); break;                      //--- CALL a16
             
             //------------------------   CB_PREFIX   ------------------------//
-            case 0xCB: ExecuteCBOpcode(ReadNextByte()); return;
+            case 0xCB: ExecuteCBOpcode(ReadNextByte()); break;
             
             //------------------------     LOAD8     ------------------------//
-            case 0x06: case 0x0E: case 0x16: case 0x1E:         //--- LD r,d8
+            case 0x06: case 0x0E: case 0x16: case 0x1E:        //--- LD r,d8
             case 0x26: case 0x2E: case 0x36: case 0x3E:
-                LD_r_d8(opcode); return;
+                LD_r_d8(opcode); break;
             
-            case >= 0x40 and <= 0x7F when opcode != 0x76:       //--- LD r,r'
-                LD_r_r(opcode); return;
+            case >= 0x40 and <= 0x7F when opcode != 0x76:      //--- LD r,r'
+                LD_r_r(opcode); break;
             
-            case 0x02: case 0x12: LD_BCDE_A(opcode); return;    //--- LD (BC/DE),A
-            case 0x0A: case 0x1A: LD_A_BCDE(opcode); return;    //--- LD A,(BC/DE)
-            case 0x22: case 0x32: LD_HL_A(opcode);   return;    //--- LD (HL+/-),A
-            case 0x2A: case 0x3A: LD_A_HL(opcode);   return;    //--- LD A,(HL+/-)
+            case 0x02: case 0x12: LD_BCDE_A(opcode); break;    //--- LD (BC/DE),A
+            case 0x0A: case 0x1A: LD_A_BCDE(opcode); break;    //--- LD A,(BC/DE)
+            case 0x22: case 0x32: LD_HL_A(opcode);   break;    //--- LD (HL+/-),A
+            case 0x2A: case 0x3A: LD_A_HL(opcode);   break;    //--- LD A,(HL+/-)
             
-            case 0xE0: LDH_a8_A();  return;                      //--- LDH (a8),A
-            case 0xF0: LDH_A_a8();  return;                      //--- LDH A,(a8)
-            case 0xE2: LD_C_A();    return;                      //--- LD (C),A
-            case 0xF2: LD_A_C();    return;                      //--- LD A,(C)
-            case 0xEA: LD_a16_A();  return;                      //--- LD (a16),A
-            case 0xFA: LD_A_a16();  return;                      //--- LD A,(a16)
+            case 0xE0: LDH_a8_A();  break;                      //--- LDH (a8),A
+            case 0xF0: LDH_A_a8();  break;                      //--- LDH A,(a8)
+            case 0xE2: LD_C_A();    break;                      //--- LD (C),A
+            case 0xF2: LD_A_C();    break;                      //--- LD A,(C)
+            case 0xEA: LD_a16_A();  break;                      //--- LD (a16),A
+            case 0xFA: LD_A_a16();  break;                      //--- LD A,(a16)
             
             //------------------------    LOAD16     ------------------------//
-            case 0x08: LD_a16_SP(); return;                     //--- LD (a16),SP
+            case 0x08: LD_a16_SP(); break;                      //--- LD (a16),SP
             case 0x01: case 0x11: case 0x21: case 0x31:         //--- LD rr,d16
-                LD_rr_d16(opcode); return;
+                LD_rr_d16(opcode); break;
             
             //------------------------     ALU8     ------------------------//
             case 0x04: case 0x0C: case 0x14: case 0x1C:         //--- INC r/(HL)
             case 0x24: case 0x2C: case 0x34: case 0x3C:
-                INC_r_HL(opcode); return;
+                INC_r_HL(opcode); break;
             
             case 0x05: case 0x0D: case 0x15: case 0x1D:         //--- DEC r/(HL)
             case 0x25: case 0x2D: case 0x35: case 0x3D:
-                DEC_r_HL(opcode); return;
+                DEC_r_HL(opcode); break;
             
             case 0x80: case 0x81: case 0x82: case 0x83:         //--- ADD A,r
             case 0x84: case 0x85: case 0x86: case 0x87:
-                ADD_A_r(opcode); return;
+                ADD_A_r(opcode); break;
             
             case 0x88: case 0x89: case 0x8A: case 0x8B:         //--- ADC A,r
             case 0x8C: case 0x8D: case 0x8E: case 0x8F:
-                ADC_A_r(opcode); return;
+                ADC_A_r(opcode); break;
             
             case 0xC6:                                          //--- ADD A,d8
             case 0xCE:                                          //--- ADC A,d8
-                ADD_ADC_A_d8(opcode); return;
+                ADD_ADC_A_d8(opcode); break;
             
             case 0x90: case 0x91: case 0x92: case 0x93:         //--- SUB A,r
             case 0x94: case 0x95: case 0x96: case 0x97:
-                SUB_A_r(opcode); return;
+                SUB_A_r(opcode); break;
             
             case 0x98: case 0x99: case 0x9A: case 0x9B:         //--- SBC A,r
             case 0x9C: case 0x9D: case 0x9E: case 0x9F:
-                SBC_A_r(opcode); return;
+                SBC_A_r(opcode); break;
             
             case 0xD6:                                          //--- SBC A,d8
             case 0xDE:                                          //--- SBC A,d8
-                SUB_SBC_A_d8(opcode); return;
+                SUB_SBC_A_d8(opcode); break;
             
             case 0xA0: case 0xA1: case 0xA2: case 0xA3:         //--- AND A,r
             case 0xA4: case 0xA5: case 0xA6: case 0xA7:
-                AND_A_r(opcode); return;
+                AND_A_r(opcode); break;
             
             case 0xE6:                                          //--- AND A,d8
-                AND_A_d8(); return;
+                AND_A_d8(); break;
             
             case 0xA8: case 0xA9: case 0xAA: case 0xAB:         //--- XOR A,r
             case 0xAC: case 0xAD: case 0xAE: case 0xAF:
-                XOR_A_r(opcode); return;
+                XOR_A_r(opcode); break;
             
             case 0xEE:                                          //--- XOR A,d8
-                XOR_A_d8(); return;
+                XOR_A_d8(); break;
             
             case 0xB0: case 0xB1: case 0xB2: case 0xB3:         //--- OR A,r
             case 0xB4: case 0xB5: case 0xB6: case 0xB7:
-                OR_A_r(opcode); return;
+                OR_A_r(opcode); break;
             
             case 0xF6:                                          //--- OR A,d8
-                OR_A_d8(); return;
+                OR_A_d8(); break;
             
             case 0xB8: case 0xB9: case 0xBA: case 0xBB:         //--- CP A,r
             case 0xBC: case 0xBD: case 0xBE: case 0xBF:
-                CP_A_r(opcode); return;
+                CP_A_r(opcode); break;
             
-            case 0xFE: CP_A_d8(); return;                       //--- CP A,d8
-            case 0x27: DAA();     return;                       //--- DAA
-            case 0x2F: CPL();     return;                       //--- CPL
-            case 0x37: SCF();     return;                       //--- SCF
-            case 0x3F: CCF();     return;                       //--- CCF
+            case 0xFE: CP_A_d8(); break;                        //--- CP A,d8
+            case 0x27: DAA();     break;                        //--- DAA
+            case 0x2F: CPL();     break;                        //--- CPL
+            case 0x37: SCF();     break;                        //--- SCF
+            case 0x3F: CCF();     break;                        //--- CCF
             
             //------------------------     ALU16     ------------------------//
             case 0x03: case 0x13: case 0x23: case 0x33:         //--- INC rr
-                INC_rr(opcode); return;
+                INC_rr(opcode); break;
             
             case 0x0B: case 0x1B: case 0x2B: case 0x3B:         //--- DEC rr
-                DEC_rr(opcode); return;
+                DEC_rr(opcode); break;
             
             case 0x09: case 0x19: case 0x29: case 0x39:         //--- ADD HL,rr
-                ADD_HL_rr(opcode); return;
+                ADD_HL_rr(opcode); break;
             
-            case 0xE8: ADD_SP_e8();  return;                    //--- ADD SP,e8
-            case 0xF8: LD_HL_SPe8(); return;                    //--- LD HL,SP+e8
-            case 0xF9: LD_SP_HL();   return;                    //--- LD SP,HL
+            case 0xE8: ADD_SP_e8();  break;                     //--- ADD SP,e8
+            case 0xF8: LD_HL_SPe8(); break;                     //--- LD HL,SP+e8
+            case 0xF9: LD_SP_HL();   break;                     //--- LD SP,HL
             
             //------------------------    ROTATE    ------------------------//
-            case 0x07: RCLA(); return;                          //--- RLCA (Rotate Left Circular Accumulator)
-            case 0x0F: RRCA(); return;                          //--- RRCA (Rotate Right Circular Accumulator)
-            case 0x17: RLA();  return;                          //--- RLA (Rotate Left through Accumulator)
-            case 0x1F: RRA();  return;                          //--- RRA (Rotate Right through Accumulator)
+            case 0x07: RCLA(); break;                           //--- RLCA (Rotate Left Circular Accumulator)
+            case 0x0F: RRCA(); break;                           //--- RRCA (Rotate Right Circular Accumulator)
+            case 0x17: RLA();  break;                           //--- RLA (Rotate Left through Accumulator)
+            case 0x1F: RRA();  break;                           //--- RRA (Rotate Right through Accumulator)
             
             //------------------------     STACK    ------------------------//
             case 0xC1: case 0xD1: case 0xE1: case 0xF1:         //--- POP rr
-                POP_rr(opcode); return;
+                POP_rr(opcode); break;
             
             case 0xC5: case 0xD5: case 0xE5: case 0xF5:         //--- PUSH rr
-                PUSH_rr(opcode); return;
+                PUSH_rr(opcode); break;
             
             default: throw new NotSupportedException($"Opcode {opcode} not supported");
         }
+        
+        return (uint)(_state.CycleCount - cycleCountBeforeStep);
     }
     
     //--------------------------------------------------------------------------------------------------//

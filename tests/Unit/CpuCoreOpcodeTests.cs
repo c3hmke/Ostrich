@@ -82,7 +82,7 @@ public sealed class CpuCoreOpcodeTests
         Assert.True(cpu.State.Halted);
         Assert.False(cpu.State.Stopped);
         Assert.Equal(pcAfterHalt, cpu.State.PC);
-        Assert.Equal(cyclesAfterHalt, cpu.State.CycleCount);
+        Assert.Equal(cyclesAfterHalt + 4, cpu.State.CycleCount);
     }
 
     [Fact] // Verifies DI clears IME immediately and cancels any pending delayed enable.

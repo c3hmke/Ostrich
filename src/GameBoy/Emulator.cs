@@ -18,8 +18,6 @@ public class Emulator : IEmulator
     public IInputState  InputState  => _input;
     public ICPU         CPU         => _cpu;
     
-    private readonly ulong _cyclesPerFrame = 70224;
-
     /// <summary> Indicates if a cartridge is successfully loaded. </summary>
     public bool IsROMLoaded => LoadedCartridge is not null;
 
@@ -66,29 +64,27 @@ public class Emulator : IEmulator
         if (LoadedCartridge is null || _bus is null) 
             return;
         
-        ulong frameEndCycle = _cpu.State.CycleCount + _cyclesPerFrame;
-        while (_cpu.State.CycleCount < frameEndCycle)
+        const ulong cyclesPerFrame  = 70224;
+        uint        cyclesThisFrame = 0;
+        
+        while (cyclesThisFrame < cyclesPerFrame)
         {
-            ulong cyclesBefore = _cpu.State.CycleCount;
-            
-            try
-            {
-                _cpu.StepInstruction();
-            }
-            catch (NotSupportedException)
-            {
-                // Temporary bring-up behavior: stop stepping this frame
-                // once we hit an opcode we haven't implemented yet.
+            uint elapsedCycles = _cpu.StepInstruction();
+
+            // STOP or no bus can currently produce 0 cycles.
+            // Keep this until STOP wake/input behavior is modeled.
+            if (elapsedCycles == 0)
                 break;
-            }
             
-            // Temporary guard: current HALT/STOP paths may consume no cycles,
-            // which would otherwise make this loop infinite.
-            if (_cpu.State.CycleCount == cyclesBefore)
-                break;
+            cyclesThisFrame += elapsedCycles;
+            
+            // TODO:
+            // _timer.Tick(elapsedCycles);
+            // _ppu.Tick(elapsedCycles);
+            // _apu.Tick(elapsedCycles);
         }
         
-        _screen.Clear(0xFFAAFFAA); // Placeholder until CPU/PPU exist.
+        _screen.Clear(0xFFAAFFAA); // Placeholder until PPU exists.
     }
     
     /// <summary> Minimal button state store. </summary>
