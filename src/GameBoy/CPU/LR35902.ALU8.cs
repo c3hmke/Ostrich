@@ -234,7 +234,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Bitwise AND an immediate 8-bit value into A. </summary>
-    private void AND_A_d8(ushort opcode)
+    private void AND_A_d8()
     {
         // Perform a bitwise AND operation on reg A and the next byte. 
         _state.A = (byte)(_state.A & ReadNextByte());
@@ -275,7 +275,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Bitwise XOR an immediate 8-bit value into A. </summary>
-    private void XOR_A_d8(ushort opcode)
+    private void XOR_A_d8()
     {
         // Perform a bitwise XOR operation on reg A and the next byte. 
         _state.A = (byte)(_state.A ^ ReadNextByte());
@@ -316,7 +316,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Bitwise OR an immediate 8-bit value into A. </summary>
-    private void OR_A_d8(ushort opcode)
+    private void OR_A_d8()
     {
         // Perform a bitwise OR operation on reg A and the next byte. 
         _state.A = (byte)(_state.A | ReadNextByte());
@@ -358,7 +358,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Compare A with an immediate 8-bit value. </summary>
-    private void CP_A_d8(ushort opcode)
+    private void CP_A_d8()
     {
         byte a   = _state.A;                            // Value in register A.
         byte val = ReadNextByte();                      // Read next byte in stream.
@@ -379,7 +379,7 @@ public sealed partial class LR35902
     }
     
     /// <summary> Adjust A to a valid BCD value after an arithmetic operation. </summary>
-    private void DAA_DecimalAdjustAfter(ushort opcode)
+    private void DAA_DecimalAdjustAfter()
     {
         // DAA (Decimal Adjust After) adjusts A to a valid BCD result after ADD/ADC or ,
         // SUB/SBC using the current N/H/C flags to determine which corrections to apply.
@@ -420,7 +420,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Complement all bits in A. </summary>
-    private void CPL_ComplementAccumulator(ushort opcode)
+    private void CPL_ComplementAccumulator()
     {
         _state.A = (byte)~_state.A;                     // Invert all bits in A (1's complement).
                 
@@ -436,7 +436,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Set the carry flag. </summary>
-    private void SCF_SetCarryFlag(ushort opcode)
+    private void SCF_SetCarryFlag()
     {
         SetFlagsZNHC(
             z: _state.FlagZ,                            // unchanged.
@@ -450,7 +450,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Complement the carry flag. </summary>
-    private void CCF_ComplementCarryFlag(ushort opcode)
+    private void CCF_ComplementCarryFlag()
     {
         SetFlagsZNHC(
             z: _state.FlagZ,                            // unchanged.

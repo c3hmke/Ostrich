@@ -162,10 +162,10 @@ public sealed partial class LR35902 : ICPU
                 ADD_HL_rr(opcode); return;
             
             case 0xE8:                                      //--- ADD SP,e8
-                ADD_SP_e8(opcode); return;
+                ADD_SP_e8(); return;
             
             case 0xF8:                                      //--- LD HL,SP+e8
-                LD_HL_SPe8(opcode); return;
+                LD_HL_SPe8(); return;
             
             //--- LD SP,HL
             case 0xF9:
@@ -262,40 +262,40 @@ public sealed partial class LR35902 : ICPU
                 AND_A_r(opcode); return;
             
             case 0xE6:                                      //- AND A,d8
-                AND_A_d8(opcode); return;
+                AND_A_d8(); return;
             
             case 0xA8: case 0xA9: case 0xAA: case 0xAB:     //- XOR A,r
             case 0xAC: case 0xAD: case 0xAE: case 0xAF:
                 XOR_A_r(opcode); return;
             
             case 0xEE:                                      //- XOR A,d8
-                XOR_A_d8(opcode); return;
+                XOR_A_d8(); return;
             
             case 0xB0: case 0xB1: case 0xB2: case 0xB3:     //- OR A,r
             case 0xB4: case 0xB5: case 0xB6: case 0xB7:
                 OR_A_r(opcode); return;
             
             case 0xF6:                                      //- OR A,d8
-                OR_A_d8(opcode); return;
+                OR_A_d8(); return;
             
             case 0xB8: case 0xB9: case 0xBA: case 0xBB:     //- CP A,r
             case 0xBC: case 0xBD: case 0xBE: case 0xBF:
                 CP_A_r(opcode); return;
             
             case 0xFE:                                      //- CP A,d8
-                CP_A_d8(opcode); return;
+                CP_A_d8(); return;
             
             case 0x27:                                      //- DAA
-                DAA_DecimalAdjustAfter(opcode); return;
+                DAA_DecimalAdjustAfter(); return;
             
             case 0x2F:                                      //- CPL
-                CPL_ComplementAccumulator(opcode); return;
+                CPL_ComplementAccumulator(); return;
             
             case 0x37:                                      //- SCF
-                SCF_SetCarryFlag(opcode); return;
+                SCF_SetCarryFlag(); return;
             
             case 0x3F:                                      //- CCF
-                CCF_ComplementCarryFlag(opcode); return;
+                CCF_ComplementCarryFlag(); return;
             
             //------------------------------------------------------------//
 

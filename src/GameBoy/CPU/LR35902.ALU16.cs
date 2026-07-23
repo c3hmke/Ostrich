@@ -80,7 +80,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Add a signed 8-bit immediate value to SP. </summary>
-    private void ADD_SP_e8(ushort opcode)
+    private void ADD_SP_e8()
     {
         byte e8   = ReadNextByte();     // Read signed 8-bit immediate operand.
         _state.SP = AddSignedToSP(e8);  // Add signed immediate to SP.
@@ -96,7 +96,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Store SP plus a signed 8-bit immediate value in HL. </summary>
-    private void LD_HL_SPe8(ushort opcode)
+    private void LD_HL_SPe8()
     {
         byte e8   = ReadNextByte();     // Read signed 8-bit immediate operand.
         _state.HL = AddSignedToSP(e8);  // Compute SP + signed immediate and store into HL.
