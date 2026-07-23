@@ -81,7 +81,6 @@ public class Emulator : IEmulator
             _bus.Tick(elapsedCycles);
             
             // TODO:
-            // _timer.Tick(elapsedCycles);
             // _ppu.Tick(elapsedCycles);
             // _apu.Tick(elapsedCycles);
         }
