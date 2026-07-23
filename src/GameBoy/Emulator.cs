@@ -78,6 +78,8 @@ public class Emulator : IEmulator
             
             cyclesThisFrame += elapsedCycles;
             
+            _bus.Tick(elapsedCycles);
+            
             // TODO:
             // _timer.Tick(elapsedCycles);
             // _ppu.Tick(elapsedCycles);
