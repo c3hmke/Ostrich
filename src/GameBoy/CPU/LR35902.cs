@@ -227,56 +227,76 @@ public sealed partial class LR35902 : ICPU
             //------------------------    ALU8    ------------------------//
             case 0x04: case 0x0C: case 0x14: case 0x1C:     //- INC r/(HL)
             case 0x24: case 0x2C: case 0x34: case 0x3C:
-                ExecuteIncRHl(opcode); return;
+                INC_r_HL(opcode); return;
+            
             case 0x05: case 0x0D: case 0x15: case 0x1D:     //- DEC r/(HL)
             case 0x25: case 0x2D: case 0x35: case 0x3D:
-                ExecuteDecRHl(opcode); return;
+                DEC_r_HL(opcode); return;
+            
             case 0x80: case 0x81: case 0x82: case 0x83:     //- ADD A,r
             case 0x84: case 0x85: case 0x86: case 0x87:
-                ExecuteAddAr(opcode); return;
+                ADD_A_r(opcode); return;
+            
             case 0x88: case 0x89: case 0x8A: case 0x8B:     //- ADC A,r
             case 0x8C: case 0x8D: case 0x8E: case 0x8F:
-                ExecuteAdcAr(opcode); return;
+                ADC_A_r(opcode); return;
+            
             case 0xC6:                                      //- ADD A,d8
             case 0xCE:                                      //- ADC A,d8
-                ExecuteAddAdcAd8(opcode); return;
+                ADD_ADC_A_d8(opcode); return;
+            
             case 0x90: case 0x91: case 0x92: case 0x93:     //- SUB A,r
             case 0x94: case 0x95: case 0x96: case 0x97:
-                ExecuteSubAr(opcode); return;
+                SUB_A_r(opcode); return;
+            
             case 0x98: case 0x99: case 0x9A: case 0x9B:     //- SBC A,r
             case 0x9C: case 0x9D: case 0x9E: case 0x9F:
-                ExecuteSbcAr(opcode); return;
+                SBC_A_r(opcode); return;
+            
             case 0xD6:                                      //- SBC A,d8
             case 0xDE:                                      //- SBC A,d8
-                ExecuteSubSbcAd8(opcode); return;
+                SUB_SBC_A_d8(opcode); return;
+            
             case 0xA0: case 0xA1: case 0xA2: case 0xA3:     //- AND A,r
             case 0xA4: case 0xA5: case 0xA6: case 0xA7:
-                ExecuteAndAr(opcode); return;
+                AND_A_r(opcode); return;
+            
             case 0xE6:                                      //- AND A,d8
-                ExecuteAndAd8(opcode); return;
+                AND_A_d8(opcode); return;
+            
             case 0xA8: case 0xA9: case 0xAA: case 0xAB:     //- XOR A,r
             case 0xAC: case 0xAD: case 0xAE: case 0xAF:
-                ExecuteXorAr(opcode); return;
+                XOR_A_r(opcode); return;
+            
             case 0xEE:                                      //- XOR A,d8
-                ExecuteXorAd8(opcode); return;
+                XOR_A_d8(opcode); return;
+            
             case 0xB0: case 0xB1: case 0xB2: case 0xB3:     //- OR A,r
             case 0xB4: case 0xB5: case 0xB6: case 0xB7:
-                ExecuteOrAr(opcode); return;
+                OR_A_r(opcode); return;
+            
             case 0xF6:                                      //- OR A,d8
-                ExecuteOrAd8(opcode); return;
+                OR_A_d8(opcode); return;
+            
             case 0xB8: case 0xB9: case 0xBA: case 0xBB:     //- CP A,r
             case 0xBC: case 0xBD: case 0xBE: case 0xBF:
-                ExecuteCpAr(opcode); return;
+                CP_A_r(opcode); return;
+            
             case 0xFE:                                      //- CP A,d8
-                ExecuteCpAd8(opcode); return;
+                CP_A_d8(opcode); return;
+            
             case 0x27:                                      //- DAA
-                ExecuteDaa(opcode); return;
+                DAA_DecimalAdjustAfter(opcode); return;
+            
             case 0x2F:                                      //- CPL
-                ExecuteCpl(opcode); return;
+                CPL_ComplementAccumulator(opcode); return;
+            
             case 0x37:                                      //- SCF
-                ExecuteScf(opcode); return;
+                SCF_SetCarryFlag(opcode); return;
+            
             case 0x3F:                                      //- CCF
-                ExecuteCcf(opcode); return;
+                CCF_ComplementCarryFlag(opcode); return;
+            
             //------------------------------------------------------------//
 
             //----------    ROTATE    ----------//
