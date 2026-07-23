@@ -1,5 +1,7 @@
 namespace GameBoy.CPU;
 
+// ReSharper disable InconsistentNaming; Using opcode names for function names, doesn't follow C# convention.
+
 public sealed partial class LR35902
 {
     //--------------------------------------------------------------------------------------------------//
@@ -378,8 +380,8 @@ public sealed partial class LR35902
         CompleteInstruction(); 
     }
     
-    /// <summary> Adjust A to a valid BCD value after an arithmetic operation. </summary>
-    private void DAA_DecimalAdjustAfter()
+    /// <summary> Decimal Adjust After, Adjust A to a valid BCD value after an arithmetic operation. </summary>
+    private void DAA()
     {
         // DAA (Decimal Adjust After) adjusts A to a valid BCD result after ADD/ADC or ,
         // SUB/SBC using the current N/H/C flags to determine which corrections to apply.
@@ -420,7 +422,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Complement all bits in A. </summary>
-    private void CPL_ComplementAccumulator()
+    private void CPL()
     {
         _state.A = (byte)~_state.A;                     // Invert all bits in A (1's complement).
                 
@@ -436,7 +438,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Set the carry flag. </summary>
-    private void SCF_SetCarryFlag()
+    private void SCF()
     {
         SetFlagsZNHC(
             z: _state.FlagZ,                            // unchanged.
@@ -450,7 +452,7 @@ public sealed partial class LR35902
     }
 
     /// <summary> Complement the carry flag. </summary>
-    private void CCF_ComplementCarryFlag()
+    private void CCF()
     {
         SetFlagsZNHC(
             z: _state.FlagZ,                            // unchanged.

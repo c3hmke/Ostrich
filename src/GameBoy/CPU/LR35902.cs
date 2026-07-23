@@ -69,62 +69,15 @@ public sealed partial class LR35902 : ICPU
 
         switch (opcode)
         {
-            //----------    MISC    ----------//
-            //--- NOP
-            case 0x00:
-                CompleteInstruction(); return;  
+            case 0x00: NOP();  return;                     //--- NOP
+            case 0x10: STOP(); return;                     //--- STOP
+            case 0x76: HALT(); return;                     //--- HALT
+            case 0xF3: DI();   return;                     //--- DI (Disable Interrupts)
+            case 0xFB: EI();   return;                     //--- EI (Enable Interrupts)
             
-            //--- PREFIX CB
-            case 0xCB:
+            case 0xCB:                                     //--- PREFIX CB
                 ExecuteCBOpcode(ReadNextByte()); return;
 
-            //---------- CTRL ----------//
-            //--- STOP
-            case 0x10:
-            {
-                _state.Stop();  // Enter stopped state until external wake event.
-                
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - STOP is a 1-byte instruction in this simplified model.
-                CompleteInstruction();
-                return;
-            }
-
-            //--- HALT
-            case 0x76:
-            {
-                bool interruptPending = GetPendingInterrupts() != 0;
-                _state.Halt(_state.InterruptMasterEnabled, interruptPending);
-                
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                //  - STOP is a 1-byte instruction in this simplified model.
-                CompleteInstruction();
-                return;
-            }
-            
-            //--- DI (Disable Interrupts)
-            case 0xF3:
-            {
-                _state.DisableInterrupts();   // DI clears IME immediately and cancels any pending EI enable.
-
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                CompleteInstruction();
-                return;
-            }
-
-            //--- EI (Enable Interrupts)
-            case 0xFB:
-            {
-                _state.ScheduleInterruptEnable(); // EI does not enable IME immediately on LR35902.
-
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                CompleteInstruction();
-                return;
-            }
             
             case 0x01: case 0x11: case 0x21: case 0x31:     //--- LD rr,d16
                 LD_rr_d16(opcode); return;
@@ -219,16 +172,16 @@ public sealed partial class LR35902 : ICPU
                 CP_A_d8(); return;
             
             case 0x27:                                      //- DAA
-                DAA_DecimalAdjustAfter(); return;
+                DAA(); return;
             
             case 0x2F:                                      //- CPL
-                CPL_ComplementAccumulator(); return;
+                CPL(); return;
             
             case 0x37:                                      //- SCF
-                SCF_SetCarryFlag(); return;
+                SCF(); return;
             
             case 0x3F:                                      //- CCF
-                CCF_ComplementCarryFlag(); return;
+                CCF(); return;
             
             //----------    ROTATE    ----------//
             
