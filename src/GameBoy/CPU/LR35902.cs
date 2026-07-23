@@ -149,8 +149,7 @@ public sealed partial class LR35902 : ICPU
             
 
             //----------    LD8    ----------//
-            //--- LD r,d8
-            case 0x06: case 0x0E: case 0x16: case 0x1E: 
+            case 0x06: case 0x0E: case 0x16: case 0x1E:     //--- LD r,d8
             case 0x26: case 0x2E: case 0x36: case 0x3E:
                 LD_r_d8(opcode); return;
             
@@ -231,70 +230,12 @@ public sealed partial class LR35902 : ICPU
             case 0x3F:                                      //- CCF
                 CCF_ComplementCarryFlag(); return;
             
-            //------------------------------------------------------------//
-
             //----------    ROTATE    ----------//
-            //--- RLCA (Rotate Left Circular Accumulator)
-            case 0x07:
-            {
-                bool carry = (_state.A & 0x80) != 0;                         // Capture bit 7, this becomes carry & new bit 0.
-                _state.A   = (byte)((_state.A << 1) | (carry ? 1 : 0));      // Rotate A left circular.
-                
-                // RLCA flags on LR35902: Z=0, N=0, H=0, C=old bit7.
-                SetFlagsZNHC(z: false, n: false, h: false, c: carry);
-                
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                CompleteInstruction();
-                return;
-            }
-            //--- RRCA (Rotate Right Circular Accumulator)
-            case 0x0F:
-            {
-                bool carry = (_state.A & 0x01) != 0;                          // Capture bit 0, this becomes carry & new bit 7.
-                _state.A   = (byte)((_state.A >> 1) | (carry ? 0x80 : 0x00)); // Rotate A right circular.
-                
-                // RRCA flags on LR35902: Z=0, N=0, H=0, C=old bit7.
-                SetFlagsZNHC(z: false, n: false, h: false, c: carry);
-
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                CompleteInstruction();
-                return;
-            }
-
-            //--- RLA (Rotate Left through Accumulator)
-            case 0x17:
-            {
-                bool oldCarry = _state.FlagC;                            // RLA Rotates left through carry:
-                bool carryOut = (_state.A & 0x80) != 0;                  // old carry -> bit 0, old bit 7 -> new carry.
-                
-                _state.A = (byte)((_state.A << 1) | (oldCarry ? 1 : 0));
-                
-                // RLA flags on LR35902: Z=0, N=0, H=0, C=old bit7.
-                SetFlagsZNHC(z: false, n: false, h: false, c: carryOut);
-                
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                CompleteInstruction();
-                return;
-            }
-            //--- RRA (Rotate Right through Accumulator)
-            case 0x1F:
-            {
-                bool oldCarry = _state.FlagC;                            // RLA Rotates right through carry:
-                bool carryOut = (_state.A & 0x01) != 0;                  // old carry -> bit 0, old bit 7 -> new carry.
-                
-                _state.A = (byte)((_state.A >> 1) | (oldCarry ? 0x80 : 0x00));
-                
-                // RLA flags on LR35902: Z=0, N=0, H=0, C=old bit7.
-                SetFlagsZNHC(z: false, n: false, h: false, c: carryOut);
-                
-                // Timing:  (4 total cycles)
-                //  - opcode fetch: 4 cycles.
-                CompleteInstruction();
-                return;
-            }
+            
+            case 0x07: RCLA(); return;                      //--- RLCA (Rotate Left Circular Accumulator)
+            case 0x0F: RRCA(); return;                      //--- RRCA (Rotate Right Circular Accumulator)
+            case 0x17: RLA();  return;                      //--- RLA (Rotate Left through Accumulator)
+            case 0x1F: RRA(); return;                       //--- RRA (Rotate Right through Accumulator)
             
             //----------    FLOW    ----------//
             case 0x18: JR_r8(opcode); return;                   //--- JR r8
