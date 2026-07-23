@@ -11,6 +11,7 @@ public sealed class Bus
     private readonly byte[]       _highRam = new byte[127];      // Small scratch region at top of memory mapped at 0xFF80-0xFFFE.
     
     private readonly GameBoyTimer _timer;                        // Memory-mapped timer hardware: DIV, TIMA, TMA, TAC.
+    private readonly PPU          _ppu;                          // Minimal PPU timing hardware: currently exposes LY at 0xFF44.
     private byte                  _interruptEnable = 0x00;       // IE at 0xFFFF: which interrupt sources are enabled.
     private byte                  _interruptFlags  = 0x00;       // IF at 0xFF0F: which interrupt sources are currently pending.
     
@@ -23,6 +24,7 @@ public sealed class Bus
 
         // Hardware components request interrupts through the bus because IF lives at 0xFF0F here.
         _timer = new GameBoyTimer(RequestInterrupt);
+        _ppu   = new PPU(RequestInterrupt);
     }
     
     /// <summary>
@@ -31,6 +33,7 @@ public sealed class Bus
     public void Tick(uint cycles)
     {
         _timer.Tick(cycles);
+        _ppu.Tick(cycles);
     }
     
     /// <summary>
@@ -48,6 +51,9 @@ public sealed class Bus
             
             case >= 0xFF04 and <= 0xFF07:                   // Timer registers are memory-mapped IO.
                 return _timer.ReadByte(address);
+            
+            case 0xFF44:                                    // Read PPU LY: current LCD scanline.
+                return _ppu.ReadByte(address);              
             
             case 0xFF0F:                                    // Interrupt Flag (IF)
                 return _interruptFlags;
@@ -78,6 +84,10 @@ public sealed class Bus
             
             case >= 0xFF04 and <= 0xFF07:               // Timer writes can update counters or reset DIV.
                 _timer.WriteByte(address, value);
+                return;
+            
+            case 0xFF44:                                // Write PPU LY: first-pass PPU behavior treats writes as timing reset.
+                _ppu.WriteByte(address, value);
                 return;
             
             case 0xFF0F:                                // Interrupt Flag (IF)
