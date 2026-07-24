@@ -2,19 +2,23 @@ namespace GameBoy;
 
 /// <summary>
 /// Central Address Bus for the emulator.
-/// All CPU memory reads and writes should eventually flow through here so address routing stays in one place instead of leaking into the CPU.
+/// All CPU memory reads and writes should eventually flow through here so address
+/// routing stays in one place instead of leaking into the CPU.
 /// </summary>
 public sealed class Bus
 {
+    // ---- RAM and ROM ----
     private readonly Cartridge    _cartridge;                    // Cartridge-controlled ROM space.
-    private readonly byte[]       _highRam = new byte[127];      // Small scratch region at top of memory mapped at 0xFF80-0xFFFE.
-    private readonly byte[]       _vRam    = new byte[8 * 1024]; // Internal video RAM mapped at 0x8000-0x9FFF. (8KB)
-    private readonly byte[]       _workRam = new byte[8 * 1024]; // Internal work RAM mapped at 0xC000-0xDFFF. (8KB)
-    
+    private readonly byte[]       _vRam    = new byte[8 * 1024]; // Internal video RAM (8KB)  0x8000-0x9FFF.
+    private readonly byte[]       _workRam = new byte[8 * 1024]; // Internal work RAM (8KB)   0xC000-0xDFFF.
+    private readonly byte[]       _oam     = new byte[160];      // Sprite attribute memory   0xFE00-0xFE9F.
+    private readonly byte[]       _highRam = new byte[127];      // Scratch region memory     0xFF80-0xFFFE.
+
+    // ---- Timers ----
     private readonly GameBoyTimer _timer;                        // Memory-mapped timer hardware: DIV, TIMA, TMA, TAC.
     private readonly PPU          _ppu;                          // Minimal PPU timing hardware: currently exposes LY at 0xFF44.
     private byte                  _interruptEnable = 0x00;       // IE at 0xFFFF: which interrupt sources are enabled.
-    private byte                  _interruptFlags  = 0x00;       // IF at 0xFF0F: which interrupt sources are currently pending.
+    private byte                  _interruptFlags  = 0x00;       // IF at 0xFF0F: which interrupt sources are pending.
     
     /// <summary>
     /// Creates a bus for a loaded cartridge and attaches memory-mapped hardware devices.
@@ -53,6 +57,15 @@ public sealed class Bus
             case >= 0xC000 and <= 0xDFFF:                   // 0xC000-0xDFFF is fixed internal work RAM.
                 return _workRam[address - 0xC000];
             
+            case >= 0xE000 and <= 0xFDFF:                   // 0xE000-0xFDFF is echo RAM (copy of work RAM).
+                return _workRam[address - 0xE000];
+            
+            case >= 0xFE00 and <= 0xFE9F:                   // 0xFE00-0xFE9F is OAM (sprite attribute memory)
+                return _oam[address - 0xFE00];
+            
+            case >= 0xFEA0 and <= 0xFEFF:                   // Unusable / prohibited memory
+                return 0xFF;
+            
             case >= 0xFF04 and <= 0xFF07:                   // Timer registers are memory-mapped IO.
                 return _timer.ReadByte(address);
             
@@ -88,6 +101,17 @@ public sealed class Bus
             
             case >= 0xC000 and <= 0xDFFF:               // Write to the internal work RAM.
                 _workRam[address - 0xC000] = value;
+                return;
+            
+            case >= 0xE000 and <= 0xFDFF:               // Write to work RAM through echo RAM.
+                _workRam[address - 0xE000] = value;
+                return;
+            
+            case >= 0xFE00 and <= 0xFE9F:               // Write to OAM (Sprite attribute memory).
+                _oam[address - 0xFE00] = value;
+                return;
+            
+            case >= 0xFEA0 and <= 0xFEFF:               // Ignore write attempts to prohibited memory.
                 return;
             
             case >= 0xFF04 and <= 0xFF07:               // Timer writes can update counters or reset DIV.
