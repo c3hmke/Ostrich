@@ -69,7 +69,7 @@ public sealed class Bus
             case >= 0xFF04 and <= 0xFF07:                   // Timer registers are memory-mapped IO.
                 return _timer.ReadByte(address);
             
-            case 0xFF44:                                    // Read PPU LY: current LCD scanline.
+            case >= 0xFF40 and <= 0xFF4B:                   // Read PPU.
                 return _ppu.ReadByte(address);              
             
             case 0xFF0F:                                    // Interrupt Flag (IF)
@@ -118,7 +118,7 @@ public sealed class Bus
                 _timer.WriteByte(address, value);
                 return;
             
-            case 0xFF44:                                // Write PPU LY: first-pass PPU behavior treats writes as timing reset.
+            case >= 0xFF40 and <= 0xFF4B:               // Write to PPU.
                 _ppu.WriteByte(address, value);
                 return;
             

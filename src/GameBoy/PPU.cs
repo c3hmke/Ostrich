@@ -9,11 +9,21 @@ namespace GameBoy;
 /// <param name="requestInterrupt">Callback used to request VBlank when the PPU reaches scanline 144.</param>
 internal sealed class PPU(Action<byte> requestInterrupt)
 {
-    private const byte VBlankInterrupt = 0x01; // IF bit 0.
-
+    private const byte VBlankInterrupt   = 0x01; // IF bit 0.
     private const uint CyclesPerScanline = 456;
     private const byte VisibleScanlines  = 144;
     private const byte TotalScanlines    = 154;
+    
+    private byte _LCDC; // FF40
+    private byte _STAT; // FF41
+    private byte _SCY;  // FF42
+    private byte _SCX;  // FF43
+    private byte _LYC;  // FF45
+    private byte _BGP;  // FF47
+    private byte _OBP0; // FF48
+    private byte _OBP1; // FF49
+    private byte _WY;   // FF4A
+    private byte _WX;   // FF4B
 
     private uint _scanlineCycles; // Accumulates cycles until a full 456-cycle scanline has elapsed.
     private byte _LY;             // FF44 LY: current LCD scanline.
@@ -46,7 +56,17 @@ internal sealed class PPU(Action<byte> requestInterrupt)
     {
         return address switch
         {
+            0xFF40 => _LCDC,
+            0xFF41 => _STAT,
+            0xFF42 => _SCY,
+            0xFF43 => _SCX,
             0xFF44 => _LY,
+            0xFF45 => _LYC,
+            0xFF47 => _BGP,
+            0xFF48 => _OBP0,
+            0xFF49 => _OBP1,
+            0xFF4A => _WY,
+            0xFF4B => _WX,
             _ => throw new ArgumentOutOfRangeException(nameof(address), address, "Not a PPU register.")
         };
     }
@@ -58,12 +78,24 @@ internal sealed class PPU(Action<byte> requestInterrupt)
     {
         switch (address)
         {
+            case 0xFF40: _LCDC = value; return;
+            case 0xFF41: _STAT = value; return;
+            case 0xFF42: _SCY  = value; return;
+            case 0xFF43: _SCX  = value; return;
+            
             // LY is read-only-ish from the CPU's point of view in real hardware.
             // For this first pass, treat writes as a reset so tests/debugging stay simple.
             case 0xFF44:
                 _LY = 0;
                 _scanlineCycles = 0;
                 return;
+            
+            case 0xFF45: _LYC  = value; return;
+            case 0xFF47: _BGP  = value; return;
+            case 0xFF48: _OBP0 = value; return;
+            case 0xFF49: _OBP1 = value; return;
+            case 0xFF4A: _WY   = value; return;
+            case 0xFF4B: _WX   = value; return;
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(address), address, "Not a PPU register.");
