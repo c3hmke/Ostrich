@@ -14,11 +14,17 @@ public sealed class Bus
     private readonly byte[]       _oam     = new byte[160];      // Sprite attribute memory   0xFE00-0xFE9F.
     private readonly byte[]       _highRam = new byte[127];      // Scratch region memory     0xFF80-0xFFFE.
 
-    // ---- Timers ----
+    // ---- Memory Registers ----
     private readonly GameBoyTimer _timer;                        // Memory-mapped timer hardware: DIV, TIMA, TMA, TAC.
     private readonly PPU          _ppu;                          // Minimal PPU timing hardware: currently exposes LY at 0xFF44.
     private byte                  _interruptEnable = 0x00;       // IE at 0xFFFF: which interrupt sources are enabled.
     private byte                  _interruptFlags  = 0x00;       // IF at 0xFF0F: which interrupt sources are pending.
+    
+    // ---- IO Registers ----
+    private byte                  _joypad = 0xCF;                // FF00 JOYP: first-pass joypad register stub.
+    private byte                  _serialData;                   // FF01 SB: serial transfer data.
+    private byte                  _serialControl = 0x7E;         // FF02 SC: first-pass serial control 
+    
     
     /// <summary>
     /// Creates a bus for a loaded cartridge and attaches memory-mapped hardware devices.
@@ -66,6 +72,15 @@ public sealed class Bus
             case >= 0xFEA0 and <= 0xFEFF:                   // Unusable / prohibited memory
                 return 0xFF;
             
+            case 0xFF00:                                    // Joypad input register.
+                return _joypad;
+            
+            case 0xFF01:                                    // Serial transfer data.
+                return _serialData;
+
+            case 0xFF02:                                    // Serial transfer control.
+                return _serialControl;
+            
             case >= 0xFF04 and <= 0xFF07:                   // Timer registers are memory-mapped IO.
                 return _timer.ReadByte(address);
             
@@ -112,6 +127,18 @@ public sealed class Bus
                 return;
             
             case >= 0xFEA0 and <= 0xFEFF:               // Ignore write attempts to prohibited memory.
+                return;
+            
+            case 0xFF00:                                // Joypad input register selection bits.
+                _joypad = (byte)(0xC0 | (value & 0x30) | 0x0F);
+                return;
+            
+            case 0xFF01:                                // Serial transfer data.
+                _serialData = value;
+                return;
+
+            case 0xFF02:                                // Serial transfer control.
+                _serialControl = value;
                 return;
             
             case >= 0xFF04 and <= 0xFF07:               // Timer writes can update counters or reset DIV.

@@ -11,5 +11,6 @@
     &lt;TestId&gt;xUnit::17BB42A7-4747-4C57-AC26-9104FF0C1B03::net10.0::Unit.BusTimerRegisterTests&lt;/TestId&gt;
     &lt;TestId&gt;xUnit::17BB42A7-4747-4C57-AC26-9104FF0C1B03::net10.0::Unit.BusPpuRegistersTests&lt;/TestId&gt;
     &lt;TestId&gt;xUnit::17BB42A7-4747-4C57-AC26-9104FF0C1B03::net10.0::Unit.BusMemoryMapTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::17BB42A7-4747-4C57-AC26-9104FF0C1B03::net10.0::Unit.BusIoRegisterTests&lt;/TestId&gt;
   &lt;/TestAncestor&gt;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
