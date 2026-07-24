@@ -118,6 +118,10 @@ public sealed class Bus
                 _timer.WriteByte(address, value);
                 return;
             
+            case 0xFF46:                                // Special handler for OAM DMA write to PPU.
+                StartOAMDMA(value);
+                return;
+            
             case >= 0xFF40 and <= 0xFF4B:               // Write to PPU.
                 _ppu.WriteByte(address, value);
                 return;
@@ -145,6 +149,14 @@ public sealed class Bus
     {
         // Only the low five IF bits exist: VBlank, STAT, Timer, Serial, Joypad.
         _interruptFlags = (byte)((_interruptFlags | interruptMask) & 0x1F);
+    }
+    
+    private void StartOAMDMA(byte sourceHighByte)
+    {
+        ushort sourceBase = (ushort)(sourceHighByte << 8);
+
+        for (ushort offset = 0; offset < 160; offset++)
+            _oam[offset] = ReadByte((ushort)(sourceBase + offset));
     }
 }
 
