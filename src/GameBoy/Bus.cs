@@ -21,6 +21,7 @@ public sealed class Bus
     private byte                  _interruptFlags  = 0x00;       // IF at 0xFF0F: which interrupt sources are pending.
     
     // ---- IO Registers ----
+    private readonly byte[]       _ioRegisters = new byte[128];  // 0xFF00-0xFF7F
     private byte                  _joypad = 0xCF;                // FF00 JOYP: first-pass joypad register stub.
     private byte                  _serialData;                   // FF01 SB: serial transfer data.
     private byte                  _serialControl = 0x7E;         // FF02 SC: first-pass serial control 
@@ -54,47 +55,50 @@ public sealed class Bus
     {
         switch (address)
         {
-            case <= 0x7FFF:                                 // 0x0000-0x7FFF is cartridge-controlled ROM space.
+            case <= 0x7FFF:                             // 0x0000-0x7FFF is cartridge-controlled ROM space.
                 return _cartridge.ReadROM(address);
             
-            case >= 0x8000 and <= 0x9FFF:                   // 0x800-0x9FFF is fixed internal video RAM.
+            case >= 0x8000 and <= 0x9FFF:               // 0x800-0x9FFF is fixed internal video RAM.
                 return _vRam[address - 0x8000];
             
-            case >= 0xC000 and <= 0xDFFF:                   // 0xC000-0xDFFF is fixed internal work RAM.
+            case >= 0xC000 and <= 0xDFFF:               // 0xC000-0xDFFF is fixed internal work RAM.
                 return _workRam[address - 0xC000];
             
-            case >= 0xE000 and <= 0xFDFF:                   // 0xE000-0xFDFF is echo RAM (copy of work RAM).
+            case >= 0xE000 and <= 0xFDFF:               // 0xE000-0xFDFF is echo RAM (copy of work RAM).
                 return _workRam[address - 0xE000];
             
-            case >= 0xFE00 and <= 0xFE9F:                   // 0xFE00-0xFE9F is OAM (sprite attribute memory)
+            case >= 0xFE00 and <= 0xFE9F:               // 0xFE00-0xFE9F is OAM (sprite attribute memory)
                 return _oam[address - 0xFE00];
             
-            case >= 0xFEA0 and <= 0xFEFF:                   // Unusable / prohibited memory
+            case >= 0xFEA0 and <= 0xFEFF:               // Unusable / prohibited memory
                 return 0xFF;
             
-            case 0xFF00:                                    // Joypad input register.
+            case 0xFF00:                                // Joypad input register.
                 return _joypad;
             
-            case 0xFF01:                                    // Serial transfer data.
+            case 0xFF01:                                // Serial transfer data.
                 return _serialData;
 
-            case 0xFF02:                                    // Serial transfer control.
+            case 0xFF02:                                // Serial transfer control.
                 return _serialControl;
             
-            case >= 0xFF04 and <= 0xFF07:                   // Timer registers are memory-mapped IO.
+            case >= 0xFF04 and <= 0xFF07:               // Timer registers are memory-mapped IO.
                 return _timer.ReadByte(address);
             
-            case >= 0xFF40 and <= 0xFF4B:                   // Read PPU.
+            case >= 0xFF40 and <= 0xFF4B:               // Read PPU.
                 return _ppu.ReadByte(address);              
             
-            case 0xFF0F:                                    // Interrupt Flag (IF)
+            case 0xFF0F:                                // Interrupt Flag (IF).
                 return _interruptFlags;
             
-            case >= 0xFF80 and <= 0xFFFE:                   // 0xFF80-0xFFFE is high RAM
+            case >= 0xFF80 and <= 0xFFFE:               // 0xFF80-0xFFFE is high RAM.
                 return _highRam[address - 0xFF80];
             
-            case 0xFFFF:                                    // Interrupt Enable (IE)
+            case 0xFFFF:                                // Interrupt Enable (IE).
                 return _interruptEnable;
+            
+            case >= 0xFF00 and <= 0xFF7F:               // Fallback for unimplemented IO registers.
+                return _ioRegisters[address - 0xFF00];
             
             default: throw new NotImplementedException($"Read not implemented for 0x{address:X4}");
         }
@@ -163,6 +167,10 @@ public sealed class Bus
             
             case 0xFFFF:                                 // Interrupt Enable (IE)
                 _interruptEnable = (byte)(value & 0x1F); // Only low 5 interrupt bits are used.
+                return;
+            
+            case >= 0xFF00 and <= 0xFF7F:                // Fallback for unimplemented IO registers.
+                _ioRegisters[address - 0xFF00] = value;
                 return;
             
             default: throw new NotImplementedException($"Write not implemented for 0x{address:X4}");
